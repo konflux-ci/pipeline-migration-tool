@@ -23,9 +23,9 @@ dynamic = ["version"]
 
 dependencies = [
   "requests==2.32.4",
-  "ruamel.yaml==0.18.10",
-  "oras==0.2.31",
-  "jsonschema==4.23.0",
+  "ruamel.yaml==0.18.14",
+  "oras==0.2.37",
+  "jsonschema==4.25.0",
   "packaging==25.0",
 ]
 

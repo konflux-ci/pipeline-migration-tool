@@ -124,9 +124,16 @@ class EditYAMLEntry:
         self.invalidate_yaml_data()
 
     def delete(self, path: YAMLPath):
-        # TODO cascading deletions if parent is empty, or dump just empty dict/list
-
         path_stack = self._get_path_stack(path)
+
+        # if the entry is the only item of parent, remove also the parent
+        while len(path_stack) > 1:
+            parent_node, _ = path_stack[-2]
+            if len(parent_node) > 1:
+                break
+            path_stack.pop()
+        path = [p for _, p in path_stack][:-1]  # drop terminal item
+
         last_node, _ = path_stack[-1]
 
         assert isinstance(last_node, (dict, list)) and hasattr(last_node, "lc")

@@ -358,13 +358,12 @@ class TestModTaskRemoveParamOperation:
         result = op_remove._remove_param(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is True
 
-        # Verify the params section is empty but still exists
+        # parent parameter should be removed when empty
         updated_doc = load_yaml(pipeline_yaml_file)
         test_task = next(
             task for task in updated_doc["spec"]["tasks"] if task["name"] == "test-task"
         )
-        # The YAML structure should handle this gracefully
-        assert test_task["params"] is None
+        assert test_task.get("params") is None
 
 
 class TestComplexScenarios:

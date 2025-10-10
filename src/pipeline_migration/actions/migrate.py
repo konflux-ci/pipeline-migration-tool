@@ -18,7 +18,7 @@ from typing import Final, Any
 
 from jsonschema.exceptions import ValidationError
 from jsonschema.validators import Draft202012Validator
-from packaging.version import Version, parse as parse_version
+from packaging.version import Version, parse as parse_version, InvalidVersion
 
 from pipeline_migration.pipeline import PipelineFileOperation
 from pipeline_migration.quay import QuayTagInfo, list_active_repo_tags
@@ -614,6 +614,8 @@ class Resolver(ABC):
             for future in as_completed(futures):
                 try:
                     future.result()
+                except InvalidVersion as e:
+                    logger.warning(f"Skipping bundle upgrade due to invalid version: {e}")
                 except Exception as e:
                     bundle_upgrade = futures[future]
                     err_msg = (

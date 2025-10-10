@@ -14,6 +14,7 @@ import responses
 import pytest
 from responses import matchers
 
+from packaging.version import InvalidVersion
 from pipeline_migration.actions import migrate
 from pipeline_migration.actions.migrate import (
     ANNOTATION_HAS_MIGRATION,
@@ -24,6 +25,7 @@ from pipeline_migration.actions.migrate import (
     MigrationImageTag,
     MigrationImagesResolver,
     determine_task_bundle_upgrades_range,
+    expand_versions,
     fetch_migration_file,
     IncorrectMigrationAttachment,
     LinkedMigrationsResolver,
@@ -244,6 +246,42 @@ class TestDetermineTaskBundleUpdatesRange:
         assert determine_task_bundle_upgrades_range(bundle_upgrade) == []
 
 
+class TestExpandVersions:
+    """Test expand_versions function"""
+
+    def test_same_version(self):
+        """Test from 0.2 to 0.2 => ["0.2"]"""
+        result = expand_versions("0.2", "0.2")
+        assert result == ["0.2"]
+
+    def test_consecutive_versions(self):
+        """Test from 0.2 to 0.3 => ["0.2", "0.3"]"""
+        result = expand_versions("0.2", "0.3")
+        assert result == ["0.2", "0.3"]
+
+    def test_multiple_versions(self):
+        """Test from 0.2 to 0.5 => ["0.2", "0.3", "0.4", "0.5"]"""
+        result = expand_versions("0.2", "0.5")
+        assert result == ["0.2", "0.3", "0.4", "0.5"]
+
+    def test_invalid_from_version_devel(self):
+        """Test that 'devel' as from version raises InvalidVersion"""
+        with pytest.raises(InvalidVersion, match="Invalid version: 'devel'"):
+            expand_versions("devel", "0.2")
+
+    def test_invalid_to_version_devel(self):
+        """Test that 'devel' as to version raises InvalidVersion"""
+        with pytest.raises(InvalidVersion, match="Invalid version: 'devel'"):
+            expand_versions("0.2", "devel")
+
+    def test_invalid_version_order(self):
+        """Test that opposite order raises ValueError"""
+        with pytest.raises(
+            ValueError, match="From version 0.2 is greater than the to version 0.1."
+        ):
+            expand_versions("0.2", "0.1")
+
+
 class TestTaskBundleUpgrade:
 
     def test_get_bundle_strings(self):
@@ -422,6 +460,96 @@ class TestResolveMigrations:
 
         manager.resolve_migrations()
         assert len(tb_upgrade.migrations) == 0
+
+    @responses.activate
+    def test_migration_is_skipped_if_invalid_version(
+        self, caplog, mock_get_manifest, monkeypatch
+    ) -> None:
+        """Test that migrations are skipped when bundle upgrades have invalid versions"""
+        caplog.set_level(logging.WARNING, "migrate")
+
+        upgrades: list[dict[str, Any]] = [
+            {
+                "depName": TASK_BUNDLE_TESTS,
+                "currentValue": "0.1",
+                "currentDigest": "sha256:3a30d8fce9ce",
+                "newValue": "devel",  # Invalid version
+                "newDigest": "sha256:3356f7c38aea",
+                "packageFile": ".tekton/component-a-pull-request.yaml",
+                "parentDir": ".tekton/",
+                "depTypes": ["tekton-bundle"],
+            },
+            {
+                "depName": TASK_BUNDLE_CLONE,
+                "currentValue": "0.1",
+                "currentDigest": "sha256:3a30d8fce9ce",
+                "newValue": "0.2",  # Valid version
+                "newDigest": "sha256:3356f7c38aea",
+                "packageFile": ".tekton/component-a-pull-request.yaml",
+                "parentDir": ".tekton/",
+                "depTypes": ["tekton-bundle"],
+            },
+        ]
+
+        manager = TaskBundleUpgradesManager(upgrades, SimpleIterationResolver)
+
+        tb_upgrades = list(manager._task_bundle_upgrades.values())
+
+        invalid_upgrade = tb_upgrades[0]
+        valid_upgrade = tb_upgrades[1]
+
+        # Set up proper migration data for the valid upgrade
+        migration_digest = generate_digest()
+        tags_info = [
+            {
+                "name": f"{valid_upgrade.new_value}-837e2cd",
+                "manifest_digest": valid_upgrade.new_digest,
+                "start_ts": 3,
+            },
+            # Make this one have a migration
+            {
+                "name": f"{valid_upgrade.new_value}-5678abc",
+                "manifest_digest": migration_digest,
+                "start_ts": 2,
+            },
+            {
+                "name": f"{valid_upgrade.current_value}-127a2be",
+                "manifest_digest": valid_upgrade.current_digest,
+                "start_ts": 1,
+            },
+        ]
+
+        mock_list_repo_tags_with_filter_tag_name(valid_upgrade.dep_name, tags_info)
+
+        for tag in tags_info:
+            c = Container(valid_upgrade.dep_name)
+            c.digest = tag["manifest_digest"]
+            has_migration = c.digest == migration_digest
+            mock_get_manifest(c, has_migration=has_migration)
+
+        script_content = "foo"
+
+        def _fetch_migration_file(image: str, digest: str) -> str | None:
+            if digest == migration_digest:
+                return script_content
+            return None
+
+        monkeypatch.setattr(
+            "pipeline_migration.actions.migrate.fetch_migration_file", _fetch_migration_file
+        )
+
+        manager.resolve_migrations()
+
+        # Invalid version upgrade was skipped (no migrations)
+        assert len(invalid_upgrade.migrations) == 0
+
+        # Valid version upgrade was processed and got actual migrations
+        assert len(valid_upgrade.migrations) == 1
+        assert valid_upgrade.migrations[0].migration_script == script_content
+
+        # Invalid version was detected
+        assert "Skipping bundle upgrade due to invalid version" in caplog.text
+        assert "Invalid version: 'devel'" in caplog.text
 
     @responses.activate
     def test_migrations_are_resolved(self, mock_get_manifest, monkeypatch) -> None:

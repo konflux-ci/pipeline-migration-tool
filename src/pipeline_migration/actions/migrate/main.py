@@ -207,6 +207,13 @@ class TaskBundleUpgradesManager:
     def resolve_migrations(self) -> None:
         """Resolve migrations for given task bundle upgrades"""
         self._resolver.resolve(list(self._task_bundle_upgrades.values()))
+        # Propagate migrations from deduplicated instances to all package file instances
+        for package_file in self._package_files:
+            for bundle_upgrade in package_file.task_bundle_upgrades:
+                dedup_instance = self._task_bundle_upgrades.get(bundle_upgrade.current_bundle)
+                if dedup_instance is not None and dedup_instance is not bundle_upgrade:
+                    # Copy migrations from deduplicated instance to this package file's instance
+                    bundle_upgrade.migrations = list(dedup_instance.migrations)
 
     def apply_migrations(self, skip_bundles: list[str]) -> None:
         """Apply migrations to package files

@@ -525,6 +525,124 @@ class TestResolveMigrations:
         assert c.uri_with_tag == migrations[0].task_bundle
         assert script_content == migrations[0].migration_script
 
+    @responses.activate
+    def test_migrations_propagated_to_all_package_file_instances(
+        self, mock_get_manifest, monkeypatch
+    ) -> None:
+        """Test that migrations are propagated from deduplicated instance to all instances
+
+        When the same bundle upgrade appears in multiple package files, migrations should be
+        resolved once for the deduplicated instance and then propagated to all instances.
+        """
+        # Use upgrades where TASK_BUNDLE_CLONE appears in both package files
+        renovate_upgrades = [
+            {
+                "depName": TASK_BUNDLE_CLONE,
+                "currentValue": "0.1",
+                "currentDigest": "sha256:3a30d8fce9ce",
+                "newValue": "0.1",
+                "newDigest": "sha256:3356f7c38aea",
+                "packageFile": ".tekton/component-a-pull-request.yaml",
+                "parentDir": ".tekton/",
+                "depTypes": ["tekton-bundle"],
+            },
+            {
+                "depName": TASK_BUNDLE_CLONE,
+                "currentValue": "0.1",
+                "currentDigest": "sha256:3a30d8fce9ce",
+                "newValue": "0.1",
+                "newDigest": "sha256:3356f7c38aea",
+                "packageFile": ".tekton/component-a-push.yaml",
+                "parentDir": ".tekton/",
+                "depTypes": ["tekton-bundle"],
+            },
+        ]
+
+        manager = TaskBundleUpgradesManager(renovate_upgrades, SimpleIterationResolver)
+
+        # Verify we have one deduplicated instance
+        assert len(manager._task_bundle_upgrades) == 1
+        dedup_instance = list(manager._task_bundle_upgrades.values())[0]
+
+        # Verify we have two package files
+        assert len(manager.package_files) == 2
+
+        # Get the bundle upgrade instances from each package file
+        pull_request_upgrade = None
+        push_upgrade = None
+        for package_file in manager.package_files:
+            for bundle_upgrade in package_file.task_bundle_upgrades:
+                if bundle_upgrade.dep_name == TASK_BUNDLE_CLONE:
+                    if package_file.file_path == ".tekton/component-a-pull-request.yaml":
+                        pull_request_upgrade = bundle_upgrade
+                    elif package_file.file_path == ".tekton/component-a-push.yaml":
+                        push_upgrade = bundle_upgrade
+
+        assert pull_request_upgrade is not None
+        assert push_upgrade is not None
+        # Verify they are different instances but have the same current_bundle
+        assert pull_request_upgrade is not push_upgrade
+        assert pull_request_upgrade.current_bundle == push_upgrade.current_bundle
+        # Verify one of them is the deduplicated instance
+        assert (pull_request_upgrade is dedup_instance) or (push_upgrade is dedup_instance)
+
+        # Setup migration resolution
+        digests_of_images_having_migration = [generate_digest()]
+        tags_info = [
+            {
+                "name": f"{dedup_instance.new_value}-837e2cd",
+                "manifest_digest": dedup_instance.new_digest,
+                "start_ts": 4,
+            },
+            # Make this one have a migration
+            {
+                "name": f"{dedup_instance.new_value}-5678abc",
+                "manifest_digest": digests_of_images_having_migration[0],
+                "start_ts": 3,
+            },
+            {
+                "name": f"{dedup_instance.current_value}-127a2be",
+                "manifest_digest": dedup_instance.current_digest,
+                "start_ts": 1,
+            },
+        ]
+
+        mock_list_repo_tags_with_filter_tag_name(dedup_instance.dep_name, tags_info)
+
+        for tag in tags_info:
+            c = Container(dedup_instance.dep_name)
+            c.digest = tag["manifest_digest"]
+            has_migration = c.digest in digests_of_images_having_migration
+            mock_get_manifest(c, has_migration=has_migration)
+
+        script_content: Final = "echo add a new task to pipeline"
+
+        def _fetch_migration_file(image: str, digest: str) -> str | None:
+            assert digest in digests_of_images_having_migration, (
+                f"Bundle with digest {digest} does not have a migration, "
+                "fetch_migration_file should not be called."
+            )
+            return script_content
+
+        monkeypatch.setattr(
+            "pipeline_migration.actions.migrate.resolvers.simple.fetch_migration_file",
+            _fetch_migration_file,
+        )
+
+        # Resolve migrations
+        manager.resolve_migrations()
+
+        # Verify deduplicated instance has migrations
+        assert len(dedup_instance.migrations) == 1
+
+        # Verify migrations are propagated to both package file instances
+        assert len(pull_request_upgrade.migrations) == 1
+        assert len(push_upgrade.migrations) == 1
+        assert pull_request_upgrade.migrations[0].migration_script == script_content
+        assert push_upgrade.migrations[0].migration_script == script_content
+        # Verify they have the same migrations (but are separate lists)
+        assert pull_request_upgrade.migrations is not push_upgrade.migrations
+
 
 class TestMigrationFileOperationHandlePipelineFile:
     """Test MigrationFileOperation"""

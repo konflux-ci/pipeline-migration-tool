@@ -26,7 +26,7 @@ dependencies = [
   "ruamel.yaml==0.18.16",
   "oras==0.2.38",
   "jsonschema==4.25.1",
-  "packaging==25.0",
+  "packaging==26.0",
 ]
 
 [project.optional-dependencies]

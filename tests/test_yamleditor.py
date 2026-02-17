@@ -1179,6 +1179,72 @@ class TestEditYAMLEntry:
 
         assert read_file_content(simple_yaml_file) == expected
 
+    def test_delete_with_none_comment_metadata(self, create_yaml_file):
+        """Test that delete handles ca.comment=[None, None] without crashing.
+
+        Regression test: when blank lines separate YAML list entries, ruamel.yaml
+        sets ca.comment to [None, None] on some nodes. This is truthy but has
+        comment[1]=None, causing a TypeError when accessed without a guard.
+        """
+        content = dedent(
+            """\
+            apiVersion: tekton.dev/v1
+            kind: PipelineRun
+            metadata:
+              name: test
+            spec:
+              pipelineSpec:
+                tasks:
+
+                - name: task-a
+                  taskRef:
+                    name: foo
+                  when:
+                  - input: $(tasks.init.results.build)
+                    operator: in
+                    values: ["true"]
+
+                - name: task-b
+                  taskRef:
+                    name: bar
+                  when:
+                  - input: $(tasks.init.results.build)
+                    operator: in
+                    values: ["true"]
+            """
+        )
+        yaml_file = create_yaml_file(content)
+
+        # Blank lines between tasks cause ca.comment=[None, None] on the
+        # 'when' node. Without the fix, this delete crashes with TypeError.
+        editor = EditYAMLEntry(yaml_file)
+        editor.delete(["spec", "pipelineSpec", "tasks", 0, "when"])
+
+        # Second removal also works
+        editor = EditYAMLEntry(yaml_file)
+        editor.delete(["spec", "pipelineSpec", "tasks", 1, "when"])
+
+        expected = dedent(
+            """\
+            apiVersion: tekton.dev/v1
+            kind: PipelineRun
+            metadata:
+              name: test
+            spec:
+              pipelineSpec:
+                tasks:
+
+                - name: task-a
+                  taskRef:
+                    name: foo
+                - name: task-b
+                  taskRef:
+                    name: bar
+            """
+        )
+
+        assert read_file_content(yaml_file) == expected
+
     @pytest.mark.parametrize(
         "yaml_path,expected_lineno",
         [

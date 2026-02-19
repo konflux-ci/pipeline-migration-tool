@@ -22,7 +22,6 @@ from pipeline_migration.actions.migrate.resolvers.transition_proxy import (
 )
 from pipeline_migration.types import RenovateUpgradeT
 
-
 SUBCMD_DESCRIPTION: Final = """\
 Migrate command applies task migrations to build pipelines. It aims to run in
 two major scenariors. One is to run as a Renovate post-upgrade command. It is

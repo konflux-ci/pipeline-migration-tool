@@ -11,7 +11,6 @@ from pipeline_migration.actions.add_task import extract_task_names, git_add
 from pipeline_migration.actions.add_task import get_task_bundle_reference
 from tests.utils import generate_digest
 
-
 IMAGE_DIGEST: Final = generate_digest()
 
 

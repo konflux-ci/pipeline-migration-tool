@@ -17,8 +17,7 @@ from pipeline_migration.utils import (
 @pytest.fixture
 def temp_file_with_content(create_yaml_file):
     """Create a temporary file with sample content for testing."""
-    content = dedent(
-        """\
+    content = dedent("""\
         Line 1
         Line 2
         Line 3
@@ -26,8 +25,7 @@ def temp_file_with_content(create_yaml_file):
         Line 5
         Line 6
         Line 7
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
@@ -50,15 +48,13 @@ class TestRemoveLinesFromFile:
         """Test removing lines from the middle of the file."""
         remove_lines_from_file(temp_file_with_content, start_line=2, num_lines=2)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -66,12 +62,10 @@ class TestRemoveLinesFromFile:
         """Test removing lines from the middle to the end of file."""
         remove_lines_from_file(temp_file_with_content, start_line=2, num_lines=-1)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -79,15 +73,13 @@ class TestRemoveLinesFromFile:
         """Test removing lines from the beginning of the file."""
         remove_lines_from_file(temp_file_with_content, start_line=0, num_lines=2)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 3
             Line 4
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -95,15 +87,13 @@ class TestRemoveLinesFromFile:
         """Test removing lines from the end of the file."""
         remove_lines_from_file(temp_file_with_content, start_line=5, num_lines=2)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Line 3
             Line 4
             Line 5
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -111,14 +101,12 @@ class TestRemoveLinesFromFile:
         """Test removing more lines than exist in the file."""
         remove_lines_from_file(temp_file_with_content, start_line=4, num_lines=10)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Line 3
             Line 4
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -167,8 +155,7 @@ class TestInsertTextAtLine:
         """Test inserting a single line at the beginning."""
         insert_text_at_line(temp_file_with_content, 0, "New Line 0")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             New Line 0
             Line 1
             Line 2
@@ -177,8 +164,7 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -186,8 +172,7 @@ class TestInsertTextAtLine:
         """Test inserting a single line in the middle."""
         insert_text_at_line(temp_file_with_content, 3, "New Line 3.5")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Line 3
@@ -196,24 +181,20 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
     def test_insert_multiple_lines(self, temp_file_with_content):
         """Test inserting multiple lines."""
-        multiline_text = dedent(
-            """\
+        multiline_text = dedent("""\
             New Line A
             New Line B
-            New Line C"""
-        )
+            New Line C""")
 
         insert_text_at_line(temp_file_with_content, 2, multiline_text)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             New Line A
@@ -224,8 +205,7 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -233,8 +213,7 @@ class TestInsertTextAtLine:
         """Test inserting beyond file length (should append)."""
         insert_text_at_line(temp_file_with_content, 10, "Appended Line")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Line 3
@@ -243,8 +222,7 @@ class TestInsertTextAtLine:
             Line 6
             Line 7
             Appended Line
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -252,8 +230,7 @@ class TestInsertTextAtLine:
         """Test inserting at the end of file."""
         insert_text_at_line(temp_file_with_content, -1, "Appended Line")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Line 3
@@ -262,8 +239,7 @@ class TestInsertTextAtLine:
             Line 6
             Line 7
             Appended Line
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -271,8 +247,7 @@ class TestInsertTextAtLine:
         """Test replacing a single line."""
         insert_text_at_line(temp_file_with_content, 2, "Replaced Line 3", replace_lines=1)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Replaced Line 3
@@ -280,24 +255,20 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
     def test_replace_multiple_lines(self, temp_file_with_content):
         """Test replacing multiple lines."""
-        multiline_replacement = dedent(
-            """\
+        multiline_replacement = dedent("""\
             Replacement Line A
             Replacement Line B
-            Replacement Line C"""
-        )
+            Replacement Line C""")
 
         insert_text_at_line(temp_file_with_content, 1, multiline_replacement, replace_lines=3)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Replacement Line A
             Replacement Line B
@@ -305,8 +276,7 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -314,8 +284,7 @@ class TestInsertTextAtLine:
         """Test replacing the last line."""
         insert_text_at_line(temp_file_with_content, 6, "New Last Line", replace_lines=1)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Line 3
@@ -323,8 +292,7 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             New Last Line
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -333,8 +301,7 @@ class TestInsertTextAtLine:
         insert_text_at_line(temp_file_with_content, 2, "")
 
         # Should add just a newline
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
 
@@ -343,8 +310,7 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -352,8 +318,7 @@ class TestInsertTextAtLine:
         """Test inserting text without trailing newline (should add one)."""
         insert_text_at_line(temp_file_with_content, 2, "Text without newline")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             Line 1
             Line 2
             Text without newline
@@ -362,8 +327,7 @@ class TestInsertTextAtLine:
             Line 5
             Line 6
             Line 7
-            """
-        )
+            """)
 
         assert read_file_content(temp_file_with_content) == expected
 
@@ -386,8 +350,7 @@ class TestEditYAMLEntry:
     @pytest.fixture
     def simple_yaml_file(self, create_yaml_file):
         """Create a temporary YAML file with simple structure."""
-        content = dedent(
-            """\
+        content = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -397,8 +360,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         return create_yaml_file(content)
 
@@ -406,8 +368,7 @@ class TestEditYAMLEntry:
     def simple_yaml_file_style2(self, create_yaml_file):
         """Create a temporary YAML file with simple structure.
         Extra indentation of the list entries."""
-        content = dedent(
-            """\
+        content = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -417,24 +378,21 @@ class TestEditYAMLEntry:
                   params:
                     - name: repo-url
                       value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         return create_yaml_file(content)
 
     @pytest.fixture
     def simple_yaml_file_flow(self, create_yaml_file):
         """Create a temporary YAML file with simple structure and flow style."""
-        content = dedent(
-            """\
+        content = dedent("""\
             name: test-pipeline
             spec:
               tasks:
                 - name: task1
                   taskRef: {name: clone}
                   params: [{"name": "repo-url", "value": "https://example.com/example/repo"}]
-            """
-        )
+            """)
 
         return create_yaml_file(content)
 
@@ -448,8 +406,7 @@ class TestEditYAMLEntry:
     @pytest.fixture
     def scalar_list_yaml_file(self, create_yaml_file):
         """Create a YAML file with lists containing scalar values."""
-        content = dedent(
-            """\
+        content = dedent("""\
             strings:
               - first
               - second
@@ -459,16 +416,14 @@ class TestEditYAMLEntry:
             mixed:
               key1: value1
               key2: value2
-            """
-        )
+            """)
 
         return create_yaml_file(content)
 
     @pytest.fixture
     def get_next_entry_test_yaml_file(self, create_yaml_file):
         """Create a temporary YAML file with simple structure."""
-        content = dedent(
-            """\
+        content = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -489,8 +444,7 @@ class TestEditYAMLEntry:
                     value: val1
                   - name: param2
                     value: val2
-            """
-        )
+            """)
 
         return create_yaml_file(content)
 
@@ -569,8 +523,7 @@ class TestEditYAMLEntry:
         new_data = {"runAfter": ["another-task"]}
         editor.insert(["spec", "tasks", 0], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -582,8 +535,7 @@ class TestEditYAMLEntry:
                   value: "https://example.com/example/repo"
                 runAfter:
                 - another-task
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -595,8 +547,7 @@ class TestEditYAMLEntry:
         new_data = {"runAfter": ["another-task"]}
         editor.insert(["spec", "tasks", 0], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -608,8 +559,7 @@ class TestEditYAMLEntry:
                       value: "https://example.com/example/repo"
                   runAfter:
                     - another-task
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_style2) == expected
 
@@ -621,8 +571,7 @@ class TestEditYAMLEntry:
         new_data = {"matrix": {"params": [{"name": "platform", "value": ["linux", "mac"]}]}}
         editor.insert(["spec", "tasks", 0], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -638,8 +587,7 @@ class TestEditYAMLEntry:
                     value:
                     - linux
                     - mac
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -651,8 +599,7 @@ class TestEditYAMLEntry:
         new_data = {"name": "new-param", "value": "new-value"}
         editor.insert(["spec", "tasks", 0, "params"], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -664,8 +611,7 @@ class TestEditYAMLEntry:
                   value: "https://example.com/example/repo"
                 - name: new-param
                   value: new-value
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -677,8 +623,7 @@ class TestEditYAMLEntry:
         new_data = {"name": "new-param", "value": "new-value"}
         editor.insert(["spec", "tasks", 0, "params"], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -690,8 +635,7 @@ class TestEditYAMLEntry:
                       value: "https://example.com/example/repo"
                     - name: new-param
                       value: new-value
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_style2) == expected
 
@@ -702,8 +646,7 @@ class TestEditYAMLEntry:
 
         editor.insert(["strings"], "third")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             strings:
               - first
               - second
@@ -714,8 +657,7 @@ class TestEditYAMLEntry:
             mixed:
               key1: value1
               key2: value2
-            """
-        )
+            """)
 
         assert read_file_content(scalar_list_yaml_file) == expected
 
@@ -726,8 +668,7 @@ class TestEditYAMLEntry:
 
         editor.insert(["numbers"], 3)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             strings:
               - first
               - second
@@ -738,34 +679,29 @@ class TestEditYAMLEntry:
             mixed:
               key1: value1
               key2: value2
-            """
-        )
+            """)
 
         assert read_file_content(scalar_list_yaml_file) == expected
 
     def test_insert_scalar_boolean_into_list(self, create_yaml_file):
         """Test inserting a scalar boolean value into a list."""
-        content = dedent(
-            """\
+        content = dedent("""\
             flags:
               - true
               - false
-            """
-        )
+            """)
         yaml_file = create_yaml_file(content)
         style = YAMLStyle.detect(yaml_file)
         editor = EditYAMLEntry(yaml_file, style)
 
         editor.insert(["flags"], True)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             flags:
               - true
               - false
               - true
-            """
-        )
+            """)
 
         assert read_file_content(yaml_file) == expected
 
@@ -791,8 +727,7 @@ class TestEditYAMLEntry:
         new_data = {"name": "test"}
         editor.replace(["spec", "tasks", 0, "taskRef"], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -802,8 +737,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -815,8 +749,7 @@ class TestEditYAMLEntry:
         new_data = {"name": "test"}
         editor.replace(["spec", "tasks", 0, "taskRef"], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -826,8 +759,7 @@ class TestEditYAMLEntry:
                   params:
                     - name: repo-url
                       value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_style2) == expected
 
@@ -839,8 +771,7 @@ class TestEditYAMLEntry:
         new_item = {"name": "replaced-item", "value": 999}
         editor.replace(["spec", "tasks", 0, "params", 0], new_item)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -850,8 +781,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: replaced-item
                   value: 999
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -863,8 +793,7 @@ class TestEditYAMLEntry:
         new_item = {"name": "replaced-item", "value": 999}
         editor.replace(["spec", "tasks", 0, "params", 0], new_item)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -874,8 +803,7 @@ class TestEditYAMLEntry:
                   params:
                     - name: replaced-item
                       value: 999
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_style2) == expected
 
@@ -886,8 +814,7 @@ class TestEditYAMLEntry:
 
         editor.delete(["spec", "tasks", 0, "taskRef"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -895,8 +822,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -907,16 +833,14 @@ class TestEditYAMLEntry:
 
         editor.delete(["spec", "tasks", 0, "params", 0])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
               - name: task1
                 taskRef:
                   name: clone
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -927,11 +851,9 @@ class TestEditYAMLEntry:
 
         editor.delete(["spec", "tasks", 0])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
-            """
-        )
+            """)
 
         with open(simple_yaml_file, "r") as f:
             content = f.read()
@@ -944,8 +866,7 @@ class TestEditYAMLEntry:
 
         editor.delete(["name"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             spec:
               tasks:
               - name: task1
@@ -954,8 +875,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -966,8 +886,7 @@ class TestEditYAMLEntry:
 
         editor.delete(["spec", "tasks", 0, "taskRef", "name"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -975,8 +894,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -987,8 +905,7 @@ class TestEditYAMLEntry:
 
         editor.delete(["spec", "tasks", 0, "params", 0, "value"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -997,8 +914,7 @@ class TestEditYAMLEntry:
                   name: clone
                 params:
                 - name: repo-url
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -1051,11 +967,9 @@ class TestEditYAMLEntry:
         # Should be able to insert into empty dict
         editor.insert([], {"new_key": "new_value"})
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             new_key: new_value
-            """
-        )
+            """)
         # Verify insertion worked
         assert read_file_content(empty_yaml_file) == expected
 
@@ -1071,8 +985,7 @@ class TestEditYAMLEntry:
         # Delete a parameter
         editor.delete(["spec", "tasks", 0, "params", 0])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1082,8 +995,7 @@ class TestEditYAMLEntry:
               - name: task2
                 taskRef:
                   name: deploy
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -1094,8 +1006,7 @@ class TestEditYAMLEntry:
 
         editor.replace(["name"], "updated-pipeline")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: updated-pipeline
             spec:
               tasks:
@@ -1105,8 +1016,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -1117,8 +1027,7 @@ class TestEditYAMLEntry:
 
         editor.replace(["spec", "tasks", 0, "taskRef", "name"], "git-clone")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1128,8 +1037,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -1140,8 +1048,7 @@ class TestEditYAMLEntry:
 
         editor.replace(["spec", "tasks", 0, "params", 0, "value"], "https://github.com/new/repo")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1151,8 +1058,7 @@ class TestEditYAMLEntry:
                 params:
                 - name: repo-url
                   value: "https://github.com/new/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
 
@@ -1163,8 +1069,7 @@ class TestEditYAMLEntry:
 
         editor.replace(["spec", "tasks", 0, "params", 0, "name"], "repository-url")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1174,10 +1079,71 @@ class TestEditYAMLEntry:
                 params:
                 - name: repository-url
                   value: "https://example.com/example/repo"
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file) == expected
+
+    def test_delete_with_none_comment_metadata(self, create_yaml_file):
+        """Test that delete handles ca.comment=[None, None] without crashing.
+
+        Regression test: when blank lines separate YAML list entries, ruamel.yaml
+        sets ca.comment to [None, None] on some nodes. This is truthy but has
+        comment[1]=None, causing a TypeError when accessed without a guard.
+        """
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: PipelineRun
+            metadata:
+              name: test
+            spec:
+              pipelineSpec:
+                tasks:
+
+                - name: task-a
+                  taskRef:
+                    name: foo
+                  when:
+                  - input: $(tasks.init.results.build)
+                    operator: in
+                    values: ["true"]
+
+                - name: task-b
+                  taskRef:
+                    name: bar
+                  when:
+                  - input: $(tasks.init.results.build)
+                    operator: in
+                    values: ["true"]
+            """)
+        yaml_file = create_yaml_file(content)
+
+        # Blank lines between tasks cause ca.comment=[None, None] on the
+        # 'when' node. Without the fix, this delete crashes with TypeError.
+        editor = EditYAMLEntry(yaml_file)
+        editor.delete(["spec", "pipelineSpec", "tasks", 0, "when"])
+
+        # Second removal also works
+        editor = EditYAMLEntry(yaml_file)
+        editor.delete(["spec", "pipelineSpec", "tasks", 1, "when"])
+
+        expected = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: PipelineRun
+            metadata:
+              name: test
+            spec:
+              pipelineSpec:
+                tasks:
+
+                - name: task-a
+                  taskRef:
+                    name: foo
+                - name: task-b
+                  taskRef:
+                    name: bar
+            """)
+
+        assert read_file_content(yaml_file) == expected
 
     @pytest.mark.parametrize(
         "yaml_path,expected_lineno",
@@ -1205,8 +1171,7 @@ class TestEditYAMLEntryComments:
 
     @pytest.fixture
     def comments_yaml_file(self, create_yaml_file):
-        content = dedent(
-            """\
+        content = dedent("""\
             spec:
                 tasks:
                 # comment line
@@ -1226,8 +1191,7 @@ class TestEditYAMLEntryComments:
                 - name: test
                     # indented comment between keys
                   data: ["line1", {name: value}]
-            """
-        )
+            """)
         return create_yaml_file(content)
 
     def test_insert_into_empty_commented_section(self, comments_yaml_file):
@@ -1236,8 +1200,7 @@ class TestEditYAMLEntryComments:
         new_item = {"params": [{"name": "test", "value": 999}]}
         editor.insert(["spec", "tasks", 1], new_item)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             spec:
                 tasks:
                 # comment line
@@ -1260,8 +1223,7 @@ class TestEditYAMLEntryComments:
                 - name: test
                     # indented comment between keys
                   data: ["line1", {name: value}]
-            """
-        )
+            """)
         assert read_file_content(comments_yaml_file) == expected
 
     def test_insert_into_non_empty_commented_section(self, comments_yaml_file):
@@ -1270,8 +1232,7 @@ class TestEditYAMLEntryComments:
         new_item = {"params": [{"name": "test", "value": 999}]}
         editor.insert(["spec", "tasks", 2], new_item)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             spec:
                 tasks:
                 # comment line
@@ -1294,8 +1255,7 @@ class TestEditYAMLEntryComments:
                   params:
                   - name: test
                     value: 999
-            """
-        )
+            """)
         assert read_file_content(comments_yaml_file) == expected
 
     def test_delete_array_item_with_comments(self, comments_yaml_file):
@@ -1303,8 +1263,7 @@ class TestEditYAMLEntryComments:
 
         editor.delete(["spec", "tasks", 0])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             spec:
                 tasks:
                 # comment line
@@ -1314,8 +1273,7 @@ class TestEditYAMLEntryComments:
                 - name: test
                     # indented comment between keys
                   data: ["line1", {name: value}]
-            """
-        )
+            """)
         assert read_file_content(comments_yaml_file) == expected
 
     def test_delete_object_item_with_comments(self, comments_yaml_file):
@@ -1323,8 +1281,7 @@ class TestEditYAMLEntryComments:
 
         editor.delete(["spec", "tasks", 0, "params"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             spec:
                 tasks:
                 # comment line
@@ -1335,8 +1292,7 @@ class TestEditYAMLEntryComments:
                 - name: test
                     # indented comment between keys
                   data: ["line1", {name: value}]
-            """
-        )
+            """)
         assert read_file_content(comments_yaml_file) == expected
 
     @pytest.mark.xfail(reason="known issue that inline comment doesn't keep indentation")
@@ -1350,8 +1306,7 @@ class TestEditYAMLEntryComments:
         replace["value"] = "replaced"
         editor.replace(["spec", "tasks", 0, "params", 0], replace)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             spec:
                 tasks:
                 # comment line
@@ -1371,8 +1326,7 @@ class TestEditYAMLEntryComments:
                 - name: test
                     # indented comment between keys
                   data: ["line1", {name: value}]
-            """
-        )
+            """)
         assert read_file_content(comments_yaml_file) == expected
 
     def test_replace_empty_commented_section(self, comments_yaml_file):
@@ -1381,8 +1335,7 @@ class TestEditYAMLEntryComments:
         new_item = {"name": "test-replaced"}
         editor.replace(["spec", "tasks", 1], new_item)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             spec:
                 tasks:
                 # comment line
@@ -1400,8 +1353,7 @@ class TestEditYAMLEntryComments:
                 - name: test
                     # indented comment between keys
                   data: ["line1", {name: value}]
-            """
-        )
+            """)
         assert read_file_content(comments_yaml_file) == expected
 
 
@@ -1411,24 +1363,21 @@ class TestEditYAMLEntryFlowStyle:
     @pytest.fixture
     def simple_yaml_file_flow(self, create_yaml_file):
         """Create a temporary YAML file with simple structure and flow style."""
-        content = dedent(
-            """\
+        content = dedent("""\
             name: test-pipeline
             spec:
               tasks:
                 - name: task1
                   taskRef: {name: clone}
                   params: [{"name": "repo-url", "value": "https://example.com/example/repo"}]
-            """
-        )
+            """)
 
         return create_yaml_file(content)
 
     @pytest.fixture
     def flow_style_yaml_file(self, create_yaml_file):
         """A YAML with flow-style lists and mappings under spec."""
-        content = dedent(
-            """\
+        content = dedent("""\
             metadata: {name: flow-pipeline}
             spec:
               tasks: [
@@ -1440,8 +1389,7 @@ class TestEditYAMLEntryFlowStyle:
                   {name: IMAGE, value: "buildah"}
                 ]}
               ]
-            """
-        )
+            """)
         return create_yaml_file(content)
 
     @pytest.fixture
@@ -1469,8 +1417,7 @@ class TestEditYAMLEntryFlowStyle:
         new_item = {"name": "replaced-item", "value": 999}
         editor.replace(["spec", "tasks", 0, "params", 0], new_item)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1479,8 +1426,7 @@ class TestEditYAMLEntryFlowStyle:
                   params:
                   - name: replaced-item
                     value: 999
-            """
-        )
+            """)
 
         with open(simple_yaml_file_flow, "r") as f:
             content = f.read()
@@ -1493,8 +1439,7 @@ class TestEditYAMLEntryFlowStyle:
         new_data = {"name": "new-param", "value": "new-value"}
         editor.insert(["spec", "tasks", 0, "params"], new_data)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1504,8 +1449,7 @@ class TestEditYAMLEntryFlowStyle:
                   - {name: repo-url, value: https://example.com/example/repo}
                   - name: new-param
                     value: new-value
-            """
-        )
+            """)
 
         with open(simple_yaml_file_flow, "r") as f:
             content = f.read()
@@ -1517,15 +1461,13 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.delete(["spec", "tasks", 0, "params", 0])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
                 - name: task1
                   taskRef: {name: clone}
-            """
-        )
+            """)
 
         with open(simple_yaml_file_flow, "r") as f:
             content = f.read()
@@ -1536,8 +1478,7 @@ class TestEditYAMLEntryFlowStyle:
         new_param = {"name": "depth", "value": "1"}
         editor.insert(["spec", "tasks", 0, "params"], new_param)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             metadata: {name: flow-pipeline}
             spec:
               tasks:
@@ -1549,8 +1490,7 @@ class TestEditYAMLEntryFlowStyle:
                 - name: depth
                   value: '1'
               - {name: build, taskRef: {name: build}, params: [{name: IMAGE, value: buildah}]}
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_yaml_file) == expected
 
@@ -1559,8 +1499,7 @@ class TestEditYAMLEntryFlowStyle:
         new_param = {"name": "depth", "value": "1"}
         editor.replace(["spec", "tasks", 0, "params", 1], new_param)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             metadata: {name: flow-pipeline}
             spec:
               tasks:
@@ -1571,8 +1510,7 @@ class TestEditYAMLEntryFlowStyle:
                 - name: depth
                   value: '1'
               - {name: build, taskRef: {name: build}, params: [{name: IMAGE, value: buildah}]}
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_yaml_file) == expected
 
@@ -1581,8 +1519,7 @@ class TestEditYAMLEntryFlowStyle:
         # Delete second param (revision) fromMohammed Rafeeq first task
         editor.delete(["spec", "tasks", 0, "params", 1])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             metadata: {name: flow-pipeline}
             spec:
               tasks:
@@ -1591,8 +1528,7 @@ class TestEditYAMLEntryFlowStyle:
                 params:
                 - {name: url, value: https://github.com/example/repo}
               - {name: build, taskRef: {name: build}, params: [{name: IMAGE, value: buildah}]}
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_yaml_file) == expected
 
@@ -1600,12 +1536,10 @@ class TestEditYAMLEntryFlowStyle:
         editor = EditYAMLEntry(root_flow_seq_file)
         editor.delete([1])  # remove {b: 2}
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             - {a: 1}
             - {c: 3}
-            """
-        )
+            """)
 
         assert read_file_content(root_flow_seq_file) == expected
 
@@ -1613,14 +1547,12 @@ class TestEditYAMLEntryFlowStyle:
         editor = EditYAMLEntry(flow_style_map_file)
         editor.insert(["config"], {"c": 3})
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             config:
               a: 1
               b: 2
               c: 3
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_map_file) == expected
 
@@ -1629,14 +1561,12 @@ class TestEditYAMLEntryFlowStyle:
         editor = EditYAMLEntry(flow_style_scalar_list_file)
         editor.insert(["items"], "third")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             items:
             - first
             - second
             - third
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_scalar_list_file) == expected
 
@@ -1645,14 +1575,12 @@ class TestEditYAMLEntryFlowStyle:
         editor = EditYAMLEntry(flow_style_scalar_list_file)
         editor.insert(["items"], 42)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             items:
             - first
             - second
             - 42
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_scalar_list_file) == expected
 
@@ -1662,8 +1590,7 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.replace(["spec", "tasks", 0, "taskRef", "name"], "git-clone")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1671,8 +1598,7 @@ class TestEditYAMLEntryFlowStyle:
                   taskRef:
                     name: git-clone
                   params: [{name: repo-url, value: https://example.com/example/repo}]
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_flow) == expected
 
@@ -1682,8 +1608,7 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.replace(["spec", "tasks", 0, "params", 0, "value"], "https://github.com/new/repo")
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1692,8 +1617,7 @@ class TestEditYAMLEntryFlowStyle:
                   params:
                   - name: repo-url
                     value: https://github.com/new/repo
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_flow) == expected
 
@@ -1705,8 +1629,7 @@ class TestEditYAMLEntryFlowStyle:
             ["spec", "tasks", 0, "params", 0, "value"], "https://github.com/updated/repo"
         )
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             metadata: {name: flow-pipeline}
             spec:
               tasks:
@@ -1717,8 +1640,7 @@ class TestEditYAMLEntryFlowStyle:
                   value: https://github.com/updated/repo
                 - {name: revision, value: main}
               - {name: build, taskRef: {name: build}, params: [{name: IMAGE, value: buildah}]}
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_yaml_file) == expected
 
@@ -1728,13 +1650,11 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.replace(["config", "a"], 10)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             config:
               a: 10
               b: 2
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_map_file) == expected
 
@@ -1744,15 +1664,13 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.delete(["spec", "tasks", 0, "taskRef", "name"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
                 - name: task1
                   params: [{name: repo-url, value: https://example.com/example/repo}]
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_flow) == expected
 
@@ -1762,8 +1680,7 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.delete(["spec", "tasks", 0, "params", 0, "value"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             name: test-pipeline
             spec:
               tasks:
@@ -1771,8 +1688,7 @@ class TestEditYAMLEntryFlowStyle:
                   taskRef: {name: clone}
                   params:
                   - name: repo-url
-            """
-        )
+            """)
 
         assert read_file_content(simple_yaml_file_flow) == expected
 
@@ -1782,8 +1698,7 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.delete(["spec", "tasks", 0, "params", 0, "value"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             metadata: {name: flow-pipeline}
             spec:
               tasks:
@@ -1793,8 +1708,7 @@ class TestEditYAMLEntryFlowStyle:
                 - name: url
                 - {name: revision, value: main}
               - {name: build, taskRef: {name: build}, params: [{name: IMAGE, value: buildah}]}
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_yaml_file) == expected
 
@@ -1804,11 +1718,9 @@ class TestEditYAMLEntryFlowStyle:
 
         editor.delete(["config", "a"])
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             config:
               b: 2
-            """
-        )
+            """)
 
         assert read_file_content(flow_style_map_file) == expected

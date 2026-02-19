@@ -168,8 +168,7 @@ def mock_get_manifest_for_migration(migration_image_manifest):
 
 @pytest.fixture
 def pipeline_yaml():
-    return dedent(
-        """\
+    return dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -210,8 +209,7 @@ def pipeline_yaml():
                 value: bundle_ref
               - name: kind
                 value: task
-        """
-    )
+        """)
 
 
 @pytest.fixture(params=["no_indents", "2_spaces_indents"])
@@ -220,8 +218,7 @@ def pipeline_yaml_with_various_indent_styles(request, pipeline_yaml):
         case "no_indents":
             return pipeline_yaml
         case "2_spaces_indents":
-            return dedent(
-                """\
+            return dedent("""\
                 apiVersion: tekton.dev/v1
                 kind: Pipeline
                 metadata:
@@ -232,16 +229,14 @@ def pipeline_yaml_with_various_indent_styles(request, pipeline_yaml):
                       image: debian:latest
                       script: |
                         git clone https://git.host/project
-                """
-            )
+                """)
         case _:
             raise ValueError(f"Unexpected param {request.param}")
 
 
 @pytest.fixture
 def pipeline_run_yaml() -> str:
-    return dedent(
-        """\
+    return dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -268,8 +263,7 @@ def pipeline_run_yaml() -> str:
                   value: bundle_ref
                 - name: kind
                   value: task
-        """
-    )
+        """)
 
 
 @pytest.fixture(params=["pipeline", "pipeline_run"])

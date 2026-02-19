@@ -22,8 +22,7 @@ def component_pipeline_dir(tmp_path):
     tekton_dir.mkdir(parents=True)
 
     # Create pipeline file
-    pipeline_content = dedent(
-        """\
+    pipeline_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -47,15 +46,13 @@ def component_pipeline_dir(tmp_path):
           params:
             - name: repo-url
               value: "https://github.com/default/repo"
-        """
-    )
+        """)
 
     pipeline_file = tekton_dir / "pipeline.yaml"
     pipeline_file.write_text(pipeline_content)
 
     # Create pipeline run file
-    pipeline_run_content = dedent(
-        """\
+    pipeline_run_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -75,8 +72,7 @@ def component_pipeline_dir(tmp_path):
             params:
               - name: global-param
                 value: "global-value"
-        """
-    )
+        """)
 
     pipeline_run_file = tekton_dir / "pipeline-run.yaml"
     pipeline_run_file.write_text(pipeline_run_content)
@@ -92,8 +88,7 @@ def second_component_dir(tmp_path):
     tekton_dir.mkdir(parents=True)
 
     # Create a different pipeline file
-    pipeline_content = dedent(
-        """\
+    pipeline_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -114,8 +109,7 @@ def second_component_dir(tmp_path):
                   value: "clean compile"
           workspaces:
             - name: source
-        """
-    )
+        """)
 
     pipeline_file = tekton_dir / "build.yaml"
     pipeline_file.write_text(pipeline_content)
@@ -664,13 +658,11 @@ class TestModifyGenericYQIntegration:
             str(component_pipeline_dir.tekton_dir),
             "generic",
             "replace",
-            dedent(
-                """\
+            dedent("""\
                 - spec
                 - tasks
                 - 0
-                """
-            ),
+                """),
             '{"name": "yq-replaced", "taskRef": {"name": "yq-task"}}',
         ]
 
@@ -693,15 +685,13 @@ class TestModifyGenericYQIntegration:
             str(component_pipeline_dir.tekton_dir),
             "generic",
             "remove",
-            dedent(
-                """\
+            dedent("""\
                 - spec
                 - tasks
                 - 0
                 - params
                 - 1
-                """
-            ),  # Remove revision param
+                """),  # Remove revision param
         ]
 
         monkeypatch.setattr("sys.argv", cmd)

@@ -2,7 +2,6 @@ import logging
 import re
 from typing import Any, Final
 
-
 logger = logging.getLogger("migrate")
 
 

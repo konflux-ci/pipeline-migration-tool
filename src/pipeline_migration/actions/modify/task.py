@@ -13,7 +13,6 @@ from pipeline_migration.types import FilePath
 from pipeline_migration.utils import YAMLStyle
 from pipeline_migration.pipeline import PipelineFileOperation, iterate_files_or_dirs
 
-
 logger = logging.getLogger("modify.task")
 
 

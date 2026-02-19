@@ -20,8 +20,7 @@ def read_file_content(file_path: str) -> str:
 @pytest.fixture
 def pipeline_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a pipeline structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -45,16 +44,14 @@ def pipeline_yaml_file(create_yaml_file):
             - name: test-task
               taskRef:
                 name: test-runner
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_finally_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a pipeline structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -78,16 +75,14 @@ def pipeline_finally_yaml_file(create_yaml_file):
             - name: test-task
               taskRef:
                 name: test-runner
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_run_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a PipelineRun structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -112,16 +107,14 @@ def pipeline_run_yaml_file(create_yaml_file):
                     value: "registry.io/app:latest"
                   - name: namespace
                     value: "production"
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_run_finally_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a PipelineRun structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -146,16 +139,14 @@ def pipeline_run_finally_yaml_file(create_yaml_file):
                     value: "registry.io/app:latest"
                   - name: namespace
                     value: "production"
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_matrix_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a pipeline structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -174,16 +165,14 @@ def pipeline_matrix_yaml_file(create_yaml_file):
             - name: test-task
               taskRef:
                 name: test-runner
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_matrix_finally_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a pipeline structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -202,16 +191,14 @@ def pipeline_matrix_finally_yaml_file(create_yaml_file):
             - name: test-task
               taskRef:
                 name: test-runner
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_run_matrix_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a PipelineRun structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -231,16 +218,14 @@ def pipeline_run_matrix_yaml_file(create_yaml_file):
               - name: test-task
                 taskRef:
                   name: test-runner
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_run_matrix_include_only_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a PipelineRun structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -260,16 +245,14 @@ def pipeline_run_matrix_include_only_yaml_file(create_yaml_file):
               - name: test-task
                 taskRef:
                   name: test-runner
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
 @pytest.fixture
 def pipeline_run_matrix_finally_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a PipelineRun structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -289,8 +272,7 @@ def pipeline_run_matrix_finally_yaml_file(create_yaml_file):
               - name: test-task
                 taskRef:
                   name: test-runner
-        """
-    )
+        """)
     return create_yaml_file(content)
 
 
@@ -317,8 +299,7 @@ class TestModTaskAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -344,8 +325,7 @@ class TestModTaskAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -362,8 +342,7 @@ class TestModTaskAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -390,8 +369,7 @@ class TestModTaskAddParamOperation:
                   params:
                     - name: verbose
                       value: 'true'
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -408,8 +386,7 @@ class TestModTaskAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -433,8 +410,7 @@ class TestModTaskAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -453,8 +429,7 @@ class TestModTaskAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -480,8 +455,7 @@ class TestModTaskAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -498,8 +472,7 @@ class TestModTaskAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is False  # No change needed
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -523,8 +496,7 @@ class TestModTaskAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -541,8 +513,7 @@ class TestModTaskAddParamOperation:
         with pytest.raises(TaskNotFoundError):
             op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -566,8 +537,7 @@ class TestModTaskAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -581,8 +551,7 @@ class TestModTaskAddParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -608,8 +577,7 @@ class TestModTaskAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -622,8 +590,7 @@ class TestModTaskAddParamOperation:
 
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_yaml_file, loaded_doc, style)
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -650,8 +617,7 @@ class TestModTaskAddParamOperation:
                         value: "registry.io/app:latest"
                       - name: namespace
                         value: "production"
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_yaml_file) == expected
 
@@ -665,8 +631,7 @@ class TestModTaskAddParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -692,8 +657,7 @@ class TestModTaskAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_finally_yaml_file) == expected
 
@@ -707,8 +671,7 @@ class TestModTaskAddParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -735,8 +698,7 @@ class TestModTaskAddParamOperation:
                         value: "registry.io/app:latest"
                       - name: namespace
                         value: "production"
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_finally_yaml_file) == expected
 
@@ -763,8 +725,7 @@ class TestModTaskRemoveParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -786,8 +747,7 @@ class TestModTaskRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -804,8 +764,7 @@ class TestModTaskRemoveParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is False
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -829,8 +788,7 @@ class TestModTaskRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -847,8 +805,7 @@ class TestModTaskRemoveParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result is False
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -872,8 +829,7 @@ class TestModTaskRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -890,8 +846,7 @@ class TestModTaskRemoveParamOperation:
         with pytest.raises(TaskNotFoundError):
             op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -915,8 +870,7 @@ class TestModTaskRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -930,8 +884,7 @@ class TestModTaskRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -953,8 +906,7 @@ class TestModTaskRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -968,8 +920,7 @@ class TestModTaskRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -992,8 +943,7 @@ class TestModTaskRemoveParamOperation:
                     params:
                       - name: image
                         value: "registry.io/app:latest"
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_yaml_file) == expected
 
@@ -1007,8 +957,7 @@ class TestModTaskRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1030,8 +979,7 @@ class TestModTaskRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_finally_yaml_file) == expected
 
@@ -1045,8 +993,7 @@ class TestModTaskRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -1069,8 +1016,7 @@ class TestModTaskRemoveParamOperation:
                     params:
                       - name: image
                         value: "registry.io/app:latest"
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_finally_yaml_file) == expected
 
@@ -1098,8 +1044,7 @@ class TestModTaskMatrixAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1120,8 +1065,7 @@ class TestModTaskMatrixAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1138,8 +1082,7 @@ class TestModTaskMatrixAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1162,8 +1105,7 @@ class TestModTaskMatrixAddParamOperation:
                     params:
                     - name: verbose
                       value: 'true'
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1180,8 +1122,7 @@ class TestModTaskMatrixAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1198,8 +1139,7 @@ class TestModTaskMatrixAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1216,8 +1156,7 @@ class TestModTaskMatrixAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1236,8 +1175,7 @@ class TestModTaskMatrixAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1254,8 +1192,7 @@ class TestModTaskMatrixAddParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is False  # No change needed
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1274,8 +1211,7 @@ class TestModTaskMatrixAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1292,8 +1228,7 @@ class TestModTaskMatrixAddParamOperation:
         with pytest.raises(TaskNotFoundError):
             op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1312,8 +1247,7 @@ class TestModTaskMatrixAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1327,8 +1261,7 @@ class TestModTaskMatrixAddParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_matrix_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1349,8 +1282,7 @@ class TestModTaskMatrixAddParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1363,8 +1295,7 @@ class TestModTaskMatrixAddParamOperation:
 
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_matrix_yaml_file, loaded_doc, style)
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -1386,8 +1317,7 @@ class TestModTaskMatrixAddParamOperation:
                   - name: test-task
                     taskRef:
                       name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_matrix_yaml_file) == expected
 
@@ -1401,8 +1331,7 @@ class TestModTaskMatrixAddParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_matrix_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -1423,8 +1352,7 @@ class TestModTaskMatrixAddParamOperation:
             - name: test-task
               taskRef:
                 name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_finally_yaml_file) == expected
 
@@ -1438,8 +1366,7 @@ class TestModTaskMatrixAddParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_matrix_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -1461,8 +1388,7 @@ class TestModTaskMatrixAddParamOperation:
                   - name: test-task
                     taskRef:
                       name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_matrix_finally_yaml_file) == expected
 
@@ -1478,8 +1404,7 @@ class TestModTaskMatrixAddParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_matrix_include_only_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -1502,8 +1427,7 @@ class TestModTaskMatrixAddParamOperation:
               - name: test-task
                 taskRef:
                   name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_matrix_include_only_yaml_file) == expected
 
@@ -1530,8 +1454,7 @@ class TestModTaskMatrixRemoveParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1544,8 +1467,7 @@ class TestModTaskMatrixRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1562,8 +1484,7 @@ class TestModTaskMatrixRemoveParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is False
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1582,8 +1503,7 @@ class TestModTaskMatrixRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1600,8 +1520,7 @@ class TestModTaskMatrixRemoveParamOperation:
         result = op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
         assert result is False
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1620,8 +1539,7 @@ class TestModTaskMatrixRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1638,8 +1556,7 @@ class TestModTaskMatrixRemoveParamOperation:
         with pytest.raises(TaskNotFoundError):
             op._do_action(tasks, ["spec", "tasks"], pipeline_matrix_yaml_file, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1658,8 +1575,7 @@ class TestModTaskMatrixRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1673,8 +1589,7 @@ class TestModTaskMatrixRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_matrix_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1687,8 +1602,7 @@ class TestModTaskMatrixRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_yaml_file) == expected
 
@@ -1702,8 +1616,7 @@ class TestModTaskMatrixRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_matrix_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -1717,8 +1630,7 @@ class TestModTaskMatrixRemoveParamOperation:
                   - name: test-task
                     taskRef:
                       name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_matrix_yaml_file) == expected
 
@@ -1732,8 +1644,7 @@ class TestModTaskMatrixRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_file(pipeline_matrix_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1746,8 +1657,7 @@ class TestModTaskMatrixRemoveParamOperation:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_matrix_finally_yaml_file) == expected
 
@@ -1761,8 +1671,7 @@ class TestModTaskMatrixRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_matrix_finally_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -1776,8 +1685,7 @@ class TestModTaskMatrixRemoveParamOperation:
                   - name: test-task
                     taskRef:
                       name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_matrix_finally_yaml_file) == expected
 
@@ -1793,8 +1701,7 @@ class TestModTaskMatrixRemoveParamOperation:
         # This should not raise an exception
         op.handle_pipeline_run_file(pipeline_run_matrix_include_only_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -1814,8 +1721,7 @@ class TestModTaskMatrixRemoveParamOperation:
                   - name: test-task
                     taskRef:
                       name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_run_matrix_include_only_yaml_file) == expected
 
@@ -1840,8 +1746,7 @@ class TestComplexScenarios:
         result2 = op2._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result2 is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1869,8 +1774,7 @@ class TestComplexScenarios:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -1891,8 +1795,7 @@ class TestComplexScenarios:
         result_remove = op_remove._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result_remove is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1916,8 +1819,7 @@ class TestComplexScenarios:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected
 
@@ -1945,8 +1847,7 @@ class TestComplexScenarios:
         result3 = op3._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
         assert result3 is True
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -1972,7 +1873,6 @@ class TestComplexScenarios:
                 - name: test-task
                   taskRef:
                     name: test-runner
-            """
-        )
+            """)
 
         assert read_file_content(pipeline_yaml_file) == expected

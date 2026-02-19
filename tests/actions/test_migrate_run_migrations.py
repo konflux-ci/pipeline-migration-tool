@@ -51,15 +51,13 @@ def ensure_params_are_added(modified_pipeline_content: str):
             indent_level = doc["spec"]["pipelineSpec"]["tasks"][0].lc.col
 
         return indent(
-            dedent(
-                """\
+            dedent("""\
                 params:
                 - name: git-url
                   value: https://github.com/org/app
                 - name: revision
                   value: '1234567'
-                """
-            ),
+                """),
             " " * indent_level,
         )
 
@@ -94,13 +92,11 @@ def ensure_workspace_is_inserted(modified_pipeline_content: str):
     indent_level = doc["spec"].lc.col
 
     expected = indent(
-        dedent(
-            """\
+        dedent("""\
             workspaces:
             - name: git-auth
               optional: 'true'
-            """
-        ),
+            """),
         " " * indent_level,
     )
     assert expected in modified_pipeline_content
@@ -114,13 +110,11 @@ def ensure_pipeline_param_git_url_is_removed(modified_pipeline_content: str):
     indent_level = doc["spec"]["pipelineSpec"].lc.col
     # Param git-url is expected to be removed
     expected = indent(
-        dedent(
-            """\
+        dedent("""\
             params:
             - name: revision
               default: "main"
-            """
-        ),
+            """),
         " " * indent_level,
     )
     assert expected in modified_pipeline_content

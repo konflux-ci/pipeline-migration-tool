@@ -1240,8 +1240,7 @@ BUNDLE_CLONE_0_1: Final = f"{TASK_BUNDLE_CLONE}:0.1@{generate_digest()}"
 BUNDLE_CLONE_0_2_1: Final = f"{TASK_BUNDLE_CLONE}:0.2.1@{generate_digest()}"
 BUNDLE_CLONE_0_3: Final = f"{TASK_BUNDLE_CLONE}:0.3@{generate_digest()}"
 
-PUSH_PIPELINE_RUN_YAML_TO_UPDATE: Final = dedent(
-    f"""\
+PUSH_PIPELINE_RUN_YAML_TO_UPDATE: Final = dedent(f"""\
     apiVersion: tekton.dev/v1
     kind: PipelineRun
     metadata:
@@ -1270,11 +1269,9 @@ PUSH_PIPELINE_RUN_YAML_TO_UPDATE: Final = dedent(
               value: {BUNDLE_CLONE_0_2_1}
             - name: kind
               value: task
-    """
-)
+    """)
 
-PUSH_PIPELINE_RUN_YAML_UP_TO_DATE: Final = dedent(
-    f"""\
+PUSH_PIPELINE_RUN_YAML_UP_TO_DATE: Final = dedent(f"""\
     apiVersion: tekton.dev/v1
     kind: PipelineRun
     metadata:
@@ -1292,8 +1289,7 @@ PUSH_PIPELINE_RUN_YAML_UP_TO_DATE: Final = dedent(
               value: {BUNDLE_CLONE_0_3}
             - name: kind
               value: task
-    """
-)
+    """)
 
 
 @responses.activate

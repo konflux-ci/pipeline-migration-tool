@@ -70,8 +70,7 @@ class TestPipelineFileOperationHandleMethod:
         "file_content,expected_err",
         [
             pytest.param(
-                dedent(
-                    """\
+                dedent("""\
                     apiVersion: tekton.dev/v1
                     kind: PipelineRun
                     metadata:
@@ -79,22 +78,19 @@ class TestPipelineFileOperationHandleMethod:
                     spec:
                         pipelineRef:
                             name: pipeline
-                    """
-                ),
+                    """),
                 "PipelineRun definition seems not embedded",
                 id="spec.pipelineRef-is-included",
             ),
             pytest.param("hello world", "not a YAML mapping", id="not-a-yaml-file"),
             pytest.param(
-                dedent(
-                    """\
+                dedent("""\
                     apiVersion: tekton.dev/v1
                     kind: PipelineRun
                     metadata:
                         name: plr
                     spec:
-                    """
-                ),
+                    """),
                 "neither .pipelineSpec nor .pipelineRef field",
                 id="empty-spec",
             ),

@@ -9,9 +9,7 @@ def test_format(monkeypatch, tmp_path):
     tekton_dir = tmp_path / ".tekton"
     tekton_dir.mkdir()
 
-    (tekton_dir / "pull.yaml").write_text(
-        dedent(
-            """\
+    (tekton_dir / "pull.yaml").write_text(dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             spec:
@@ -21,23 +19,17 @@ def test_format(monkeypatch, tmp_path):
               pipelineSpec:
                 - name: revision
                   default: "main"
-            """
-        )
-    )
+            """))
 
     # TODO: add wrapped description
-    (tekton_dir / "build-pipeline.yaml").write_text(
-        dedent(
-            """\
+    (tekton_dir / "build-pipeline.yaml").write_text(dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             spec:
               params:
                 - name: revision
                   default: "main"
-            """
-        )
-    )
+            """))
 
     cmd = ["pmt", "format", str(tekton_dir)]
     monkeypatch.setattr("sys.argv", cmd)

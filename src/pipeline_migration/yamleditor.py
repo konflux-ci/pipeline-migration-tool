@@ -311,7 +311,17 @@ class EditYAMLEntry:
 
         # remove old content till next element
         next_entry_line = self._get_next_entry_line(path_stack)
-        remove_lines_num = next_entry_line - lineno
+
+        if next_entry_line == EOF:
+            # last entry in the file, remove everything to EOF
+            remove_lines_num = EOF
+        elif last_node.ca.end:
+            # blank lines or comment lines exist after the node;
+            # preserve them by stopping before them
+            remove_lines_num = last_node.ca.end[0].start_mark.line - lineno
+        else:
+            # no trailing blank lines, remove up to the next entry
+            remove_lines_num = next_entry_line - lineno
         remove_lines_from_file(
             self.yaml_file_path,
             lineno,

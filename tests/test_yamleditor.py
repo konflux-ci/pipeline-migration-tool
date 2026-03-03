@@ -1138,6 +1138,7 @@ class TestEditYAMLEntry:
                 - name: task-a
                   taskRef:
                     name: foo
+
                 - name: task-b
                   taskRef:
                     name: bar

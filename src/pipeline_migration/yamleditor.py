@@ -326,7 +326,7 @@ class EditYAMLEntry:
             return isinstance(parent, dict)
         return False
 
-    def _get_next_entry_line(self, path_stack: PathStack) -> int | None:
+    def _get_next_entry_line(self, path_stack: PathStack) -> int:
         """Find lineno where the next item in yaml starts.
 
         Method looks for sibling item, if sibling doesn't exist
@@ -335,10 +335,10 @@ class EditYAMLEntry:
         IMPORTANT: this function works only with block style, make sure that
         path stack points to the block style
 
-        :returns: line where next item in yaml file begins. When
-                None is returned it's EOF (end of file), it's the
-                last item in the yaml file
-        :rtype: int | None
+        :returns: line where next item in yaml file begins. EOF is returned when
+            no next entry is found, which means the last item in the path stack
+            is the last item in the yaml file.
+        :rtype: int
         """
         path_stack = copy.copy(path_stack)
 

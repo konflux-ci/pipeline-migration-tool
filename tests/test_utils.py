@@ -114,46 +114,38 @@ def test_indentation_detection(yaml, expected, tmp_path):
         [
             None,
             {"params": [{"name": "git-url"}, {"name": "revision"}]},
-            dedent(
-                """\
+            dedent("""\
                 params:
                 - name: git-url
                 - name: revision
-                """
-            ),
+                """),
         ],
         [
             YAMLStyle(indentation=BlockSequenceIndentation(indentations={0: 1})),
             {"params": [{"name": "git-url"}, {"name": "revision"}]},
-            dedent(
-                """\
+            dedent("""\
                 params:
                 - name: git-url
                 - name: revision
-                """
-            ),
+                """),
         ],
         [
             YAMLStyle(indentation=BlockSequenceIndentation(indentations={2: 1})),
             {"params": [{"name": "git-url"}, {"name": "revision"}]},
-            dedent(
-                """\
+            dedent("""\
                 params:
                   - name: git-url
                   - name: revision
-                """
-            ),
+                """),
         ],
         [
             YAMLStyle(indentation=BlockSequenceIndentation(indentations={2: 2, 0: 10, 3: 1})),
             {"params": [{"name": "git-url"}, {"name": "revision"}]},
-            dedent(
-                """\
+            dedent("""\
                 params:
                 - name: git-url
                 - name: revision
-                """
-            ),
+                """),
         ],
     ],
 )

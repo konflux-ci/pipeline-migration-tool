@@ -301,7 +301,7 @@ class EditYAMLEntry:
         lineno = last_node.lc.line
 
         # in case of preceding empty lines or comments, we have to remove them as well
-        if last_node.ca.comment:
+        if last_node.ca.comment and last_node.ca.comment[1]:
             # getting first empty line/comment
             lineno = last_node.ca.comment[1][0].start_mark.line
 

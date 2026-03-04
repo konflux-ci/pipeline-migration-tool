@@ -10,7 +10,6 @@ from pipeline_migration.types import FilePath
 from ruamel.yaml import YAML, CommentedMap, CommentedSeq
 from ruamel.yaml.comments import CommentedBase
 
-
 __all__ = [
     "BlockSequenceIndentation",
     "create_yaml_obj",

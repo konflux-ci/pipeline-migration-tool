@@ -22,8 +22,7 @@ def read_file_content(file_path: Path) -> str:
 @pytest.fixture
 def pipeline_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a pipeline structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -47,8 +46,7 @@ def pipeline_yaml_file(create_yaml_file):
           params:
             - name: repo-url
               value: "https://github.com/default/repo"
-        """
-    )
+        """)
 
     return create_yaml_file(content)
 
@@ -56,8 +54,7 @@ def pipeline_yaml_file(create_yaml_file):
 @pytest.fixture
 def pipeline_run_yaml_file(create_yaml_file):
     """Create a temporary YAML file with a PipelineRun structure."""
-    content = dedent(
-        """\
+    content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -77,8 +74,7 @@ def pipeline_run_yaml_file(create_yaml_file):
             params:
               - name: global-param
                 value: "global-value"
-        """
-    )
+        """)
 
     return create_yaml_file(content)
 
@@ -86,8 +82,7 @@ def pipeline_run_yaml_file(create_yaml_file):
 @pytest.fixture
 def simple_yaml_file(create_yaml_file):
     """Create a simple YAML file for testing."""
-    content = dedent(
-        """\
+    content = dedent("""\
         root:
           level1:
             items:
@@ -98,8 +93,7 @@ def simple_yaml_file(create_yaml_file):
             config:
               setting1: "value1"
               setting2: "value2"
-        """
-    )
+        """)
 
     return create_yaml_file(content)
 
@@ -161,8 +155,7 @@ class TestYAMLFromValueParam:
 
     def test_complex_nested_structure(self):
         """Test parsing a complex nested YAML structure."""
-        value_str = dedent(
-            """\
+        value_str = dedent("""\
             {
               "tasks": [
                 {
@@ -173,8 +166,7 @@ class TestYAMLFromValueParam:
                 }
               ]
             }
-            """
-        )
+            """)
         result = _yaml_from_value_param(value_str)
         expected = {
             "tasks": [{"name": "test-task", "params": [{"name": "param1", "value": "value1"}]}]
@@ -226,8 +218,7 @@ class TestModGenericInsert:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -239,8 +230,7 @@ class TestModGenericInsert:
                   setting1: "value1"
                   setting2: "value2"
                   setting3: value3
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -254,8 +244,7 @@ class TestModGenericInsert:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -268,8 +257,7 @@ class TestModGenericInsert:
                 config:
                   setting1: "value1"
                   setting2: "value2"
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -288,8 +276,7 @@ class TestModGenericInsert:
 
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -319,8 +306,7 @@ class TestModGenericInsert:
               params:
                 - name: repo-url
                   value: "https://github.com/default/repo"
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_yaml_file)
         assert actual == expected
@@ -359,8 +345,7 @@ class TestModGenericInsert:
 
         op.handle_pipeline_run_file(pipeline_run_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: PipelineRun
             metadata:
@@ -382,21 +367,18 @@ class TestModGenericInsert:
                     value: "global-value"
                   - name: new-param
                     value: new-value
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_run_yaml_file)
         assert actual == expected
 
     def test_insert_scalar_string_into_list(self, create_yaml_file):
         """Test inserting a scalar string value into a list."""
-        content = dedent(
-            """\
+        content = dedent("""\
             items:
               - first
               - second
-            """
-        )
+            """)
         yaml_file = create_yaml_file(content)
 
         op = ModGenericInsert(["items"], "third")
@@ -405,27 +387,23 @@ class TestModGenericInsert:
 
         op.handle_pipeline_file(yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             items:
               - first
               - second
               - third
-            """
-        )
+            """)
 
         actual = read_file_content(yaml_file)
         assert actual == expected
 
     def test_insert_scalar_integer_into_list(self, create_yaml_file):
         """Test inserting a scalar integer value into a list."""
-        content = dedent(
-            """\
+        content = dedent("""\
             numbers:
               - 1
               - 2
-            """
-        )
+            """)
         yaml_file = create_yaml_file(content)
 
         op = ModGenericInsert(["numbers"], 3)
@@ -434,27 +412,23 @@ class TestModGenericInsert:
 
         op.handle_pipeline_file(yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             numbers:
               - 1
               - 2
               - 3
-            """
-        )
+            """)
 
         actual = read_file_content(yaml_file)
         assert actual == expected
 
     def test_insert_scalar_into_dict_fails(self, create_yaml_file):
         """Test that inserting a scalar into a dict raises an error."""
-        content = dedent(
-            """\
+        content = dedent("""\
             config:
               key1: value1
               key2: value2
-            """
-        )
+            """)
         yaml_file = create_yaml_file(content)
 
         op = ModGenericInsert(["config"], "scalar_value")
@@ -486,8 +460,7 @@ class TestModGenericReplace:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -498,8 +471,7 @@ class TestModGenericReplace:
                 config:
                   setting1: new_value1
                   setting3: value3
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -514,8 +486,7 @@ class TestModGenericReplace:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -526,8 +497,7 @@ class TestModGenericReplace:
                 config:
                   setting1: "value1"
                   setting2: "value2"
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -546,8 +516,7 @@ class TestModGenericReplace:
 
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -569,8 +538,7 @@ class TestModGenericReplace:
               params:
                 - name: repo-url
                   value: "https://github.com/default/repo"
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_yaml_file)
         assert actual == expected
@@ -585,8 +553,7 @@ class TestModGenericReplace:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -597,8 +564,7 @@ class TestModGenericReplace:
                 config:
                   setting1: "value1"
                   setting2: "value2"
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -612,8 +578,7 @@ class TestModGenericReplace:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -624,8 +589,7 @@ class TestModGenericReplace:
                 config:
                   setting1: "new_string_value"
                   setting2: "value2"
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -649,8 +613,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -658,8 +621,7 @@ class TestModGenericRemove:
                     value: 1
                   - name: item2
                     value: 2
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -673,8 +635,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -683,8 +644,7 @@ class TestModGenericRemove:
                 config:
                   setting1: "value1"
                   setting2: "value2"
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -698,8 +658,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -717,8 +676,7 @@ class TestModGenericRemove:
               params:
                 - name: repo-url
                   value: "https://github.com/default/repo"
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_yaml_file)
         assert actual == expected
@@ -732,8 +690,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -752,8 +709,7 @@ class TestModGenericRemove:
               params:
                 - name: repo-url
                   value: "https://github.com/default/repo"
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_yaml_file)
         assert actual == expected
@@ -767,8 +723,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -778,8 +733,7 @@ class TestModGenericRemove:
                     value: 2
                 config:
                   setting2: "value2"
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -793,8 +747,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -816,8 +769,7 @@ class TestModGenericRemove:
               params:
                 - name: repo-url
                   value: "https://github.com/default/repo"
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_yaml_file)
         assert actual == expected
@@ -831,8 +783,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             root:
               level1:
                 items:
@@ -842,8 +793,7 @@ class TestModGenericRemove:
                 config:
                   setting1: "value1"
                   setting2: "value2"
-            """
-        )
+            """)
 
         actual = read_file_content(simple_yaml_file)
         assert actual == expected
@@ -857,8 +807,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             spec:
@@ -880,8 +829,7 @@ class TestModGenericRemove:
               params:
                 - name: repo-url
                   value: "https://github.com/default/repo"
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_yaml_file)
         assert actual == expected
@@ -895,8 +843,7 @@ class TestModGenericRemove:
 
         op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
 
-        expected = dedent(
-            """\
+        expected = dedent("""\
             apiVersion: tekton.dev/v1
             kind: Pipeline
             metadata:
@@ -919,8 +866,7 @@ class TestModGenericRemove:
               params:
                 - name: repo-url
                   value: "https://github.com/default/repo"
-            """
-        )
+            """)
 
         actual = read_file_content(pipeline_yaml_file)
         assert actual == expected

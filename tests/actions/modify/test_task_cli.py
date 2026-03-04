@@ -21,8 +21,7 @@ def component_pipeline_dir(tmp_path):
     tekton_dir.mkdir(parents=True)
 
     # Create pipeline file
-    pipeline_content = dedent(
-        """\
+    pipeline_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -46,15 +45,13 @@ def component_pipeline_dir(tmp_path):
             - name: test-task
               taskRef:
                 name: test-runner
-        """
-    )
+        """)
 
     pipeline_file = tekton_dir / "pipeline.yaml"
     pipeline_file.write_text(pipeline_content)
 
     # Create pipeline run file
-    pipeline_run_content = dedent(
-        """\
+    pipeline_run_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -79,8 +76,7 @@ def component_pipeline_dir(tmp_path):
                     value: "registry.io/app:latest"
                   - name: namespace
                     value: "production"
-        """
-    )
+        """)
 
     pipeline_run_file = tekton_dir / "pipeline-run.yaml"
     pipeline_run_file.write_text(pipeline_run_content)
@@ -96,8 +92,7 @@ def component_matrix_pipeline_dir(tmp_path):
     tekton_dir.mkdir(parents=True)
 
     # Create pipeline file
-    pipeline_content = dedent(
-        """\
+    pipeline_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -123,15 +118,13 @@ def component_matrix_pipeline_dir(tmp_path):
             - name: test-task
               taskRef:
                 name: test-runner
-        """
-    )
+        """)
 
     pipeline_file = tekton_dir / "pipeline.yaml"
     pipeline_file.write_text(pipeline_content)
 
     # Create pipeline run file
-    pipeline_run_content = dedent(
-        """\
+    pipeline_run_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: PipelineRun
         metadata:
@@ -158,8 +151,7 @@ def component_matrix_pipeline_dir(tmp_path):
                     value: "registry.io/app:latest"
                   - name: namespace
                     value: "production"
-        """
-    )
+        """)
 
     pipeline_run_file = tekton_dir / "pipeline-run.yaml"
     pipeline_run_file.write_text(pipeline_run_content)
@@ -175,8 +167,7 @@ def second_component_dir(tmp_path):
     tekton_dir.mkdir(parents=True)
 
     # Create a different pipeline file
-    pipeline_content = dedent(
-        """\
+    pipeline_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -197,8 +188,7 @@ def second_component_dir(tmp_path):
                   value: "clean compile"
                 - name: MAVEN_ARGS
                   value: "-DskipTests=true"
-        """
-    )
+        """)
 
     pipeline_file = tekton_dir / "build.yaml"
     pipeline_file.write_text(pipeline_content)
@@ -214,8 +204,7 @@ def second_component_matrix_dir(tmp_path):
     tekton_dir.mkdir(parents=True)
 
     # Create a different pipeline file
-    pipeline_content = dedent(
-        """\
+    pipeline_content = dedent("""\
         apiVersion: tekton.dev/v1
         kind: Pipeline
         metadata:
@@ -238,8 +227,7 @@ def second_component_matrix_dir(tmp_path):
                     value: "clean compile"
                   - name: MAVEN_ARGS
                     value: "-DskipTests=true"
-        """
-    )
+        """)
 
     pipeline_file = tekton_dir / "build.yaml"
     pipeline_file.write_text(pipeline_content)

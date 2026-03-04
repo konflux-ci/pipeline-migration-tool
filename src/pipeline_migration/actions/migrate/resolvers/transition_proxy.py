@@ -27,13 +27,13 @@ class DecentralizationTransitionResolverProxy(Resolver):
         yield TaskBundleMigration("", "")  # yield empty instance to fulfill linters
 
     def _resolve_task(self, bundle_upgrade: TaskBundleUpgrade) -> None:
+        repo = bundle_upgrade.dep_name
         if has_migration_image(bundle_upgrade.dep_name):
             resolve_method = self._mir.resolve_single_upgrade
+            self.logger.debug("Migration image is found from repository %s", repo)
         else:
             resolve_method = self._lmr.resolve_single_upgrade
-        self.logger.debug(
-            "Migration image is found from repository %s, then use %s to resolve migrations.",
-            bundle_upgrade.dep_name,
-            resolve_method.__self__.__class__.__name__,
-        )
+            self.logger.debug("Migration image is not found from repository %s", repo)
+        class_name = resolve_method.__self__.__class__.__name__
+        self.logger.debug("Use %s to resolve migrations.", class_name)
         resolve_method(bundle_upgrade)

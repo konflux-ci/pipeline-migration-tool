@@ -1,5 +1,7 @@
 name: Test
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 jobs:
@@ -19,3 +21,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unit-tests
+          files: coverage.xml
+          fail_ci_if_error: false

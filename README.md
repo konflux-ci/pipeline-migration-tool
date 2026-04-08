@@ -36,11 +36,9 @@ typically with `oras attach`. Let's go deep dive a bit.
 * A task bundle has only one migration.
 * A migration is written as a normal Bash script. Generally, it invokes `yq` to modify the pipelines.
 
-Document [Task Migration]
-(https://github.com/konflux-ci/build-definitions/?tab=readme-ov-file#task-migration) of
-konflux-ci/build-definitions describes the migrations in detail. build-definitions provides a rich
-tool chain and CI for creation, validation and ensuring migrations are available to
-pipeline-migration-tool.
+Document [Task Migration] of konflux-ci/build-definitions describes the migrations in detail.
+build-definitions provides a rich tool chain and CI for creation, validation and ensuring migrations
+are available to pipeline-migration-tool.
 
 pipeline-migration-tool is configured in Konflux Mintmaker as a Renovate post-upgrade command and
 Renovate is responsible for invoke migration tool properly. Then, in general, it is unnecessary for
@@ -72,8 +70,7 @@ single task bundle upgrade, for example:
 ]
 ```
 
-The field names map to the [Renovate template fields]
-(https://docs.renovatebot.com/templates/#other-available-fields) directly:
+The field names map to the [Renovate template fields] directly:
 
 * `depName`: `{{depName}}`
 * `currentValue`: `{{currentValue}}`
@@ -275,8 +272,7 @@ This integration test sets up a testing environment, inside which tasks are buil
 
 Prerequisite:
 
-- A local clone of [konflux-ci/build-definitions](https://github.com/konflux-ci/build-definitions)
-  and checkout to `main` branch.
+- A local clone of [konflux-ci/build-definitions] and checkout to `main` branch.
 - Create public image repositories `task-clone` and `task-lint` under specified `QUAY_NAMESPACE`.
 - Log into Quay.io in order to make `tkn-bundle-push` work.
 
@@ -351,16 +347,14 @@ Follow these steps to make and publish a release. Here, version `0.4.2` is used 
 Done 🎉
 
 Then, Renovate will send an update pull request to [konflux-ci/mintmaker-renovate-image]
-(https://github.com/konflux-ci/mintmaker-renovate-image) automatically in order to upgrade
-pipeline-migration-tool to the new version.
+automatically in order to upgrade pipeline-migration-tool to the new version.
 
 Post-release steps:
 
 - It is highly recommend to link the Renovate update pull request to the release story.
 - If there is no release story for the new release, it can be optionally linked to the major feature
   or bugfix JIRA issue.
-- Open a pull request to MintMaker [Renovate configuration]
-  (https://github.com/konflux-ci/mintmaker/blob/main/config/renovate/renovate.json) when necessary
+- Open a pull request to MintMaker [Renovate configuration] when necessary
   to use new command line interface.
 
 ### Run script alternatively
@@ -395,3 +389,8 @@ limitations under the License.
 
 
 [releases]: https://github.com/konflux-ci/pipeline-migration-tool/releases
+[konflux-ci/mintmaker-renovate-image]: https://github.com/konflux-ci/mintmaker-renovate-image
+[Task Migration]: https://github.com/konflux-ci/build-definitions/?tab=readme-ov-file#task-migration
+[Renovate template fields]: https://docs.renovatebot.com/templates/#other-available-fields
+[Renovate configuration]: https://github.com/konflux-ci/mintmaker/blob/main/config/renovate/renovate.json
+[konflux-ci/build-definitions]: https://github.com/konflux-ci/build-definitions

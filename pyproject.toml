@@ -22,9 +22,9 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
-  "requests==2.33.0",
+  "requests==2.33.1",
   "ruamel.yaml==0.19.1",
-  "oras==0.2.41",
+  "oras==0.2.42",
   "jsonschema==4.26.0",
   "packaging==26.0",
 ]

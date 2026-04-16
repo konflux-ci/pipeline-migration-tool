@@ -1107,6 +1107,8 @@ class TestEditYAMLEntry:
                     operator: in
                     values: ["true"]
 
+                # task-b
+
                 - name: task-b
                   taskRef:
                     name: bar
@@ -1138,6 +1140,9 @@ class TestEditYAMLEntry:
                 - name: task-a
                   taskRef:
                     name: foo
+
+                # task-b
+
                 - name: task-b
                   taskRef:
                     name: bar

@@ -294,9 +294,9 @@ oras==0.2.42 \
     --hash=sha256:51d17088e5dffdeb585dd930bdccb4329762bef4af3f18600392ebae525a9231 \
     --hash=sha256:d1e2184d42ce99258bd0ad56d932b0f4fce289bccf1b5094436a29579f385728
     # via pipeline-migration-tool (pyproject.toml)
-packaging==26.0 \
-    --hash=sha256:00243ae351a257117b6a241061796684b084ed1c516a08c48a3f7e147a9d80b4 \
-    --hash=sha256:b36f1fef9334a5588b4166f8bcd26a14e521f2b55e6b9de3aaa80d3ff7a37529
+packaging==26.2 \
+    --hash=sha256:5fc45236b9446107ff2415ce77c807cee2862cb6fac22b8a73826d0693b0980e \
+    --hash=sha256:ff452ff5a3e828ce110190feff1178bb1f2ea2281fa2075aadb987c2fb221661
     # via
     #   pipeline-migration-tool (pyproject.toml)
     #   pyproject-api
@@ -419,9 +419,9 @@ referencing==0.37.0 \
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1 \
-    --hash=sha256:18817f8c57c6263968bc123d237e3b8b08ac046f5456bd1e307ee8f4250d3517 \
-    --hash=sha256:4e6d1ef462f3626a1f0a0a9c42dd93c63bad33f9f1c1937509b8c5c8718ab56a
+requests==2.34.2 \
+    --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0 \
+    --hash=sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed
     # via
     #   oras
     #   pipeline-migration-tool (pyproject.toml)

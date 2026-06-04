@@ -1397,3 +1397,142 @@ def test_detect_pmt_modify_use(script, expected):
     )
     op = TransitionToModifyCommandOperation([tb_upgrade])
     assert op._all_migrations_utilize_modify_cmd() == expected
+
+
+@pytest.mark.parametrize(
+    "pattern,path,expected",
+    [
+        pytest.param("quay.io/org/**", "quay.io/org/img", True, id="doublestar-end-one-segment"),
+        pytest.param(
+            "quay.io/org/**", "quay.io/org/sub/img", True, id="doublestar-end-multi-segments"
+        ),
+        pytest.param("quay.io/org/**", "quay.io/other/img", False, id="doublestar-end-no-match"),
+        pytest.param(
+            "quay.io/org/**/img", "quay.io/org/img", True, id="doublestar-mid-zero-segments"
+        ),
+        pytest.param(
+            "quay.io/org/**/img", "quay.io/org/sub/img", True, id="doublestar-mid-one-segment"
+        ),
+        pytest.param(
+            "quay.io/org/**/img",
+            "quay.io/org/a/b/img",
+            True,
+            id="doublestar-mid-multi-segments",
+        ),
+        pytest.param(
+            "quay.io/org/**/img", "quay.io/org/other", False, id="doublestar-mid-no-match"
+        ),
+        pytest.param("quay.io/org/*", "quay.io/org/img", True, id="single-star-matches"),
+        pytest.param("quay.io/org/*", "quay.io/org/sub/img", False, id="single-star-no-deep-match"),
+        pytest.param("quay.io/org/img", "quay.io/org/img", True, id="exact-match"),
+        pytest.param("quay.io/org/img", "quay.io/org/other", False, id="exact-no-match"),
+        pytest.param("quay.io/org/img-?", "quay.io/org/img-a", True, id="question-mark-one-char"),
+        pytest.param(
+            "quay.io/org/img-?", "quay.io/org/img-ab", False, id="question-mark-no-multi-char"
+        ),
+        pytest.param(
+            "quay.io/org/img-?", "quay.io/org/img-", False, id="question-mark-no-zero-char"
+        ),
+        pytest.param("**", "anything/at/all", True, id="match-everything"),
+        pytest.param("quay.io/**/sub/*", "quay.io/sub/img", True, id="combined-zero-mid-segments"),
+        pytest.param("quay.io/**/sub/*", "quay.io/a/sub/img", True, id="combined-one-mid-segment"),
+        pytest.param(
+            "quay.io/**/sub/*",
+            "quay.io/a/b/sub/img",
+            True,
+            id="combined-multi-mid-segments",
+        ),
+        pytest.param(
+            "quay.io/**/sub/*", "quay.io/a/sub/x/y", False, id="combined-star-no-deep-match"
+        ),
+        pytest.param("quay.io/org.name/*", "quay.io/org.name/img", True, id="dot-literal-match"),
+        pytest.param("quay.io/org.name/*", "quay.io/orgXname/img", False, id="dot-not-wildcard"),
+    ],
+)
+def test_glob_matching(pattern, path, expected):
+    from pipeline_migration.actions.migrate.main import is_allowed_image_repo
+
+    assert is_allowed_image_repo(path, [pattern]) == expected
+
+
+@pytest.mark.parametrize(
+    "image_repo,allowlist,expected",
+    [
+        pytest.param(
+            "quay.io/konflux-ci/catalog/task-clone",
+            ["quay.io/konflux-ci/**"],
+            True,
+            id="matches-konflux-prefix",
+        ),
+        pytest.param(
+            "reg.io/ns/app",
+            ["quay.io/konflux-ci/**"],
+            False,
+            id="no-match",
+        ),
+        pytest.param(
+            "quay.io/konflux-ci/catalog/task-clone",
+            ["reg.io/**", "quay.io/konflux-ci/**"],
+            True,
+            id="matches-second-pattern",
+        ),
+        pytest.param(
+            "reg.io/ns/app",
+            [],
+            False,
+            id="empty-allowlist",
+        ),
+        pytest.param(
+            "anything",
+            ["**"],
+            True,
+            id="wildcard-matches-all",
+        ),
+        pytest.param(
+            "quay.io/konflux-ci/tekton-catalog/task-init",
+            ["quay.io/konflux-ci/tekton-catalog/task-init"],
+            True,
+            id="matches-individual-image-repo",
+        ),
+        pytest.param(
+            "quay.io/konflux-ci/catalog/task-clone",
+            ["konflux-ci/**"],
+            False,
+            id="mid-string-pattern-does-not-match",
+        ),
+        pytest.param(
+            "quay.io/konflux-ci/catalog/task-clone",
+            ["quay.io/konflux-ci/**", "quay.io/other/**"],
+            True,
+            id="overlapping-patterns-first-matches",
+        ),
+        pytest.param(
+            "quay.io/konflux-ci-evil/task",
+            ["quay.io/konflux-ci/**"],
+            False,
+            id="glob-prevents-partial-org-match",
+        ),
+        pytest.param(
+            "quay.io/Konflux-CI/catalog/task",
+            ["quay.io/konflux-ci/**"],
+            False,
+            id="case-sensitive-no-match",
+        ),
+        pytest.param(
+            "quay.io/konflux-ci/catalog/task-clone",
+            ["quay.io/konflux-ci/catalog/*"],
+            True,
+            id="single-star-matches-one-segment",
+        ),
+        pytest.param(
+            "quay.io/konflux-ci/catalog/sub/task-clone",
+            ["quay.io/konflux-ci/catalog/*"],
+            False,
+            id="single-star-does-not-match-multiple-segments",
+        ),
+    ],
+)
+def test_is_allowed_image_repo(image_repo, allowlist, expected):
+    from pipeline_migration.actions.migrate.main import is_allowed_image_repo
+
+    assert is_allowed_image_repo(image_repo, allowlist) == expected

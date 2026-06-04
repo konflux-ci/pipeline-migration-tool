@@ -180,6 +180,6 @@ echo "Then,
 
 (
 cd ${SCRIPTDIR}/app
-PMT_LOCAL_TEST=1 pipeline-migration-tool -u \"\$(cat /tmp/pmt-test-upgrades.txt)\"
+pipeline-migration-tool -u \"\$(cat /tmp/pmt-test-upgrades.txt)\"
 )
 "

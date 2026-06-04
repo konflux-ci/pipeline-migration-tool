@@ -30,7 +30,7 @@ from pipeline_migration.actions.migrate.resolvers import Resolver
 from pipeline_migration.actions.migrate.resolvers.migration_images import MigrationImageTag
 
 from pipeline_migration.quay import list_active_repo_tags
-from pipeline_migration.registry import Container, ImageIndex, Registry
+from pipeline_migration.registry import REGISTRY, Container, ImageIndex, Registry
 from pipeline_migration.pipeline import PipelineFileOperation
 from pipeline_migration.types import FilePath
 from pipeline_migration.utils import file_checksum, is_true, load_yaml, dump_yaml, YAMLStyle
@@ -266,27 +266,70 @@ def migrate(upgrades: list[dict[str, Any]], migration_resolver: type["Resolver"]
         raise ExceptionGroup("migrate errors", errors)
 
 
-def comes_from_konflux(image_repo: str) -> bool:
-    if os.environ.get("PMT_LOCAL_TEST"):
-        logger.warning(
-            "Environment variable PMT_LOCAL_TEST is set. Migration tool works with images "
-            "from arbitrary registry organization."
-        )
-        return True
-    return image_repo.startswith("quay.io/konflux-ci/")
+def _translate_glob_pattern(pat: str) -> str:
+    """Translate a glob pattern to a regex string for full matching.
+
+    ``*`` matches any characters within a single path segment (no ``/``).
+    ``**/`` optionally matches one or more characters followed by ``/``.
+    ``**`` (not followed by ``/``) matches any characters, including ``/``.
+    ``?`` matches any single character except ``/``.
+
+    :param pat: a glob pattern string to translate.
+    :type pat: str
+    :return: a regex string suitable for use with ``re.fullmatch``.
+    :rtype: str
+    """
+    parts = re.split(r"(\*\*/?|[*?])", pat)
+    result: list[str] = []
+    for part in parts:
+        if part == "**/":
+            result.append("(?:.+/)?")
+        elif part == "**":
+            result.append(".*")
+        elif part == "*":
+            result.append("[^/]*")
+        elif part == "?":
+            result.append("[^/]")
+        elif part:
+            result.append(re.escape(part))
+    return "".join(result)
 
 
-def clean_upgrades(input_upgrades: str) -> list[dict[str, Any]]:
+def is_allowed_image_repo(image_repo: str, allowlist: list[str]) -> bool:
+    """Check whether an image repository matches at least one allowlist pattern.
+
+    Each pattern is a glob matched against *image_repo*.
+
+    :param image_repo: the image repository name to check (e.g. Renovate depName).
+    :type image_repo: str
+    :param allowlist: list of glob patterns. The image is allowed if any
+        pattern matches.
+    :type allowlist: list[str]
+    :return: True if *image_repo* matches at least one pattern, False otherwise.
+    :rtype: bool
+    """
+    for pattern in allowlist:
+        regex = _translate_glob_pattern(pattern)
+        if re.fullmatch(regex, image_repo) is not None:
+            return True
+    return False
+
+
+def clean_upgrades(input_upgrades: str, allowlist: list[str] | None = None) -> list[dict[str, Any]]:
     """Clean input Renovate upgrades string
 
-    Only images from konflux-ci image organization are returned. If
-    PMT_LOCAL_TEST environment variable is set, this check is skipped and images
-    from arbitrary image organizations are returned.
+    Only images from quay.io are considered. If an allowlist is provided,
+    only quay.io images matching at least one pattern are returned. If no
+    allowlist is provided, all quay.io images are accepted.
 
     Only return images handled by Renovate tekton manager.
 
     :param input_upgrades: a JSON string containing Renovate upgrades data.
     :type input_upgrades: str
+    :param allowlist: optional list of glob patterns. If provided, only
+        image repositories matching at least one pattern are accepted.
+        If None, all quay.io images are accepted.
+    :type allowlist: list[str] or None
     :return: a list of valid upgrade mappings.
     :raises InvalidRenovateUpgradesData: if the input upgrades data is not a
         JSON data and cannot be decoded. If the loaded upgrades data cannot be
@@ -323,8 +366,11 @@ def clean_upgrades(input_upgrades: str) -> list[dict[str, Any]]:
             continue
 
         dep_name = upgrade["depName"]
-        if not comes_from_konflux(dep_name):
-            logger.info("Dependency %s does not come from Konflux task definitions.", dep_name)
+        if not dep_name.startswith(f"{REGISTRY}/"):
+            logger.info("Dependency %s is not from %s, skip.", dep_name, REGISTRY)
+            continue
+        if allowlist is not None and not is_allowed_image_repo(dep_name, allowlist):
+            logger.info("Dependency %s does not match any pattern in the allowlist.", dep_name)
             continue
 
         cleaned_upgrades.append(upgrade)

@@ -97,6 +97,31 @@ pmt migrate \
 
 By default, `migrate` searches Pipeline/PipelineRun YAML files from directory `.tekton/`. Alternatively, use `--pipeline-file` to specify a specific one.
 
+### Restricting image organizations with `--allowlist`
+
+Images must come from `quay.io`. Use `--allowlist` to further restrict which image repositories
+are accepted. Each value is **a glob pattern** matched against the image repository (Renovate
+`depName`): `*` matches within a single path segment (no `/`) and `**` matches any characters including `/`. The option
+can be specified multiple times. If omitted, all `quay.io` images are accepted.
+
+```bash
+pmt migrate -u '<upgrades>' \
+  --allowlist 'quay.io/konflux-ci/tekton-catalog/**' \
+  --allowlist 'quay.io/app-team/**'
+```
+
+In the above example, only images from `quay.io/konflux-ci/tekton-catalog/` and `quay.io/app-team/` are handled.
+Individual image repositories can also be specified:
+
+```bash
+pmt migrate -u '<upgrades>' --allowlist 'quay.io/konflux-ci/tekton-catalog/task-init'
+```
+
+> [!NOTE]
+> Use `**` to match any depth of sub-paths (e.g. `quay.io/konflux-ci/**`).
+> Use `*` to match a single path segment (e.g. `quay.io/konflux-ci/tekton-catalog/*`).
+> A pattern without wildcards matches only the exact image repository name.
+
 ### Add a task to build pipeline with `add-task`
 
 Sub-command `add-task` provides rich options to add a task via bundle reference to build pipelines in local
@@ -305,7 +330,7 @@ QUAY_NAMESPACE="<quay namespace passed to build-definitions/hack/build-and-push.
 ./hack/integration-test/setup.sh
 
 cd ./hack/integration-test/app
-PMT_LOCAL_TEST=1 pmt migrate -u "$(cat /tmp/pmt-test-upgrades.txt)"
+pmt migrate -u "$(cat /tmp/pmt-test-upgrades.txt)"
 
 # Check if the tool works as expected.
 ```

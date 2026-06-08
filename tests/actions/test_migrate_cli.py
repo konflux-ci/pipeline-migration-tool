@@ -536,6 +536,8 @@ class TestMigrateTaskBundleUpgrade:
         else:
             cli_cmd = ["pmt", "migrate", "-u", json.dumps(tb_upgrades)]
 
+        cli_cmd.extend(["--allowlist", "quay.io/konflux-ci/**"])
+
         # Nothing change to the CLI command if using linked migrations.
         # Linked migrations are used by default.
         if not use_linked_migrations:
@@ -991,9 +993,9 @@ mock_image_digest_2: Final[str] = generate_digest()
                     {
                         "depName": APP_IMAGE_REPO,
                         "currentValue": "0.1",
-                        "currentDigest": generate_digest(),
+                        "currentDigest": mock_image_digest,
                         "newValue": "0.1",
-                        "newDigest": generate_digest(),
+                        "newDigest": mock_image_digest,
                         "packageFile": ".tekton/pipeline.yaml",
                         "parentDir": ".tekton",
                         "depTypes": ["tekton-bundle"],
@@ -1001,7 +1003,7 @@ mock_image_digest_2: Final[str] = generate_digest()
                 ],
             ),
             [],
-            id="cleanup-image-not-from-known-image-repo",
+            id="image-not-from-quay-io-filtered-out",
         ),
         pytest.param(
             json.dumps(
@@ -1108,8 +1110,110 @@ mock_image_digest_2: Final[str] = generate_digest()
                     "parentDir": ".tekton",
                     "depTypes": ["tekton-bundle"],
                 },
+            ],
+            id="non-quay-io-image-filtered-even-without-allowlist",
+        ),
+    ],
+)
+def test_clean_upgrades(upgrades_json_s, expected):
+    if isinstance(expected, str):
+        with pytest.raises(InvalidRenovateUpgradesData, match=expected):
+            clean_upgrades(upgrades_json_s)
+    else:
+        assert clean_upgrades(upgrades_json_s) == expected
+
+
+@pytest.mark.parametrize(
+    "allowlist,upgrades_json_s,expected",
+    [
+        pytest.param(
+            ["quay.io/konflux-ci/**"],
+            json.dumps(
+                [
+                    {
+                        "depName": "quay.io/other-org/task-image",
+                        "currentValue": "0.1",
+                        "currentDigest": mock_image_digest,
+                        "newValue": "0.1",
+                        "newDigest": mock_image_digest,
+                        "packageFile": ".tekton/pipeline.yaml",
+                        "parentDir": ".tekton",
+                        "depTypes": ["tekton-bundle"],
+                    },
+                ],
+            ),
+            [],
+            id="allowlist-filters-non-matching-image",
+        ),
+        pytest.param(
+            ["quay.io/konflux-ci/**"],
+            json.dumps(
+                [
+                    {
+                        "depName": TASK_BUNDLE_CLONE,
+                        "currentValue": "0.1",
+                        "currentDigest": mock_image_digest,
+                        "newValue": "0.1",
+                        "newDigest": mock_image_digest,
+                        "packageFile": ".tekton/pipeline.yaml",
+                        "parentDir": ".tekton",
+                        "depTypes": ["tekton-bundle"],
+                    },
+                ],
+            ),
+            [
                 {
-                    "depName": APP_IMAGE_REPO,
+                    "depName": TASK_BUNDLE_CLONE,
+                    "currentValue": "0.1",
+                    "currentDigest": mock_image_digest,
+                    "newValue": "0.1",
+                    "newDigest": mock_image_digest,
+                    "packageFile": ".tekton/pipeline.yaml",
+                    "parentDir": ".tekton",
+                    "depTypes": ["tekton-bundle"],
+                },
+            ],
+            id="allowlist-passes-matching-image",
+        ),
+        pytest.param(
+            ["quay.io/konflux-ci/catalog/task-clone", "quay.io/konflux-ci/catalog/task-lint"],
+            json.dumps(
+                [
+                    {
+                        "depName": TASK_BUNDLE_CLONE,
+                        "currentValue": "0.1",
+                        "currentDigest": mock_image_digest,
+                        "newValue": "0.1",
+                        "newDigest": mock_image_digest,
+                        "packageFile": ".tekton/pipeline.yaml",
+                        "parentDir": ".tekton",
+                        "depTypes": ["tekton-bundle"],
+                    },
+                    {
+                        "depName": TASK_BUNDLE_LINT,
+                        "currentValue": "0.1",
+                        "currentDigest": mock_image_digest_2,
+                        "newValue": "0.1",
+                        "newDigest": mock_image_digest_2,
+                        "packageFile": ".tekton/pipeline.yaml",
+                        "parentDir": ".tekton",
+                        "depTypes": ["tekton-bundle"],
+                    },
+                ],
+            ),
+            [
+                {
+                    "depName": TASK_BUNDLE_CLONE,
+                    "currentValue": "0.1",
+                    "currentDigest": mock_image_digest,
+                    "newValue": "0.1",
+                    "newDigest": mock_image_digest,
+                    "packageFile": ".tekton/pipeline.yaml",
+                    "parentDir": ".tekton",
+                    "depTypes": ["tekton-bundle"],
+                },
+                {
+                    "depName": TASK_BUNDLE_LINT,
                     "currentValue": "0.1",
                     "currentDigest": mock_image_digest_2,
                     "newValue": "0.1",
@@ -1119,18 +1223,80 @@ mock_image_digest_2: Final[str] = generate_digest()
                     "depTypes": ["tekton-bundle"],
                 },
             ],
-            id="normal-work-with-local-test-set",
+            id="allowlist-multiple-patterns",
+        ),
+        pytest.param(
+            [],
+            json.dumps(
+                [
+                    {
+                        "depName": TASK_BUNDLE_CLONE,
+                        "currentValue": "0.1",
+                        "currentDigest": mock_image_digest,
+                        "newValue": "0.1",
+                        "newDigest": mock_image_digest,
+                        "packageFile": ".tekton/pipeline.yaml",
+                        "parentDir": ".tekton",
+                        "depTypes": ["tekton-bundle"],
+                    },
+                ],
+            ),
+            [],
+            id="empty-allowlist-blocks-all",
         ),
     ],
 )
-def test_clean_upgrades(request, upgrades_json_s, expected, monkeypatch):
-    if isinstance(expected, str):
-        with pytest.raises(InvalidRenovateUpgradesData, match=expected):
-            clean_upgrades(upgrades_json_s)
-    else:
-        if request.node.callspec.id == "normal-work-with-local-test-set":
-            monkeypatch.setenv("PMT_LOCAL_TEST", "1")
-        assert clean_upgrades(upgrades_json_s) == expected
+def test_clean_upgrades_with_allowlist(allowlist, upgrades_json_s, expected):
+    assert clean_upgrades(upgrades_json_s, allowlist=allowlist) == expected
+
+
+def test_clean_upgrades_registry_gate_before_allowlist():
+    """Non-quay.io images are rejected by the registry gate even when they match the allowlist."""
+    non_quay_upgrade = json.dumps(
+        [
+            {
+                "depName": "reg.io/ns/app",
+                "currentValue": "0.1",
+                "currentDigest": mock_image_digest,
+                "newValue": "0.1",
+                "newDigest": mock_image_digest,
+                "packageFile": ".tekton/pipeline.yaml",
+                "parentDir": ".tekton",
+                "depTypes": ["tekton-bundle"],
+            },
+        ],
+    )
+    result = clean_upgrades(non_quay_upgrade, allowlist=["reg.io/**"])
+    assert result == []
+
+
+def test_no_upgrades_matched_allowlist_warning(caplog, monkeypatch):
+    upgrades = json.dumps(
+        [
+            {
+                "depName": TASK_BUNDLE_CLONE,
+                "currentValue": "0.1",
+                "currentDigest": mock_image_digest,
+                "newValue": "0.1",
+                "newDigest": mock_image_digest,
+                "packageFile": ".tekton/pipeline.yaml",
+                "parentDir": ".tekton",
+                "depTypes": ["tekton-bundle"],
+            },
+        ],
+    )
+    cli_cmd = [
+        "pmt",
+        "migrate",
+        "-u",
+        upgrades,
+        "--allowlist",
+        "quay.io/no-match/**",
+    ]
+    monkeypatch.setattr("sys.argv", cli_cmd)
+    with caplog.at_level(logging.WARNING):
+        entry_point()
+    assert "No upgrades matched the specified allowlist patterns" in caplog.text
 
 
 def test_missing_both_upgrades_args(caplog, monkeypatch):

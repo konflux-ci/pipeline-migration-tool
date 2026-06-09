@@ -105,6 +105,7 @@ def get_task_bundle_reference(value: str) -> str:
 
 
 def task_param(value: str) -> tuple[str, str]:
+    """Parse a key=value parameter string into a tuple."""
     parts = value.split("=", 1)
     if len(parts) == 1:
         raise ArgumentTypeError("Missing parameter name or value.")
@@ -112,6 +113,7 @@ def task_param(value: str) -> tuple[str, str]:
 
 
 def register_cli(subparser) -> None:
+    """Register the add-task subcommand and its arguments."""
     add_task_parser = subparser.add_parser(
         "add-task",
         help="Add a task to build pipelines using a bundle reference.",
@@ -193,6 +195,7 @@ def register_cli(subparser) -> None:
 
 
 class AddTaskOperation(PipelineFileOperation):
+    """Pipeline file operation that adds a new task to pipeline definitions."""
 
     def __init__(
         self,
@@ -209,12 +212,14 @@ class AddTaskOperation(PipelineFileOperation):
         self.add_to_finally = add_to_finally
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Add the task to a Pipeline file."""
         yaml_path, tasks = self._resolve_path_and_task_list(["spec"], loaded_doc)
         self._handle_pipeline_files(yaml_path, tasks, file_path, style, loaded_doc)
 
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
+        """Add the task to a PipelineRun file."""
         yaml_path, tasks = self._resolve_path_and_task_list(["spec", "pipelineSpec"], loaded_doc)
         self._handle_pipeline_files(yaml_path, tasks, file_path, style, loaded_doc)
 
@@ -381,6 +386,7 @@ def extract_task_names(tasks: CommentedSeq) -> tuple[set[str], set[str]]:
 
 
 def action(args) -> None:
+    """Execute the add-task command with the parsed CLI arguments."""
     bundle_ref: str = args.bundle_ref
 
     container = Container(bundle_ref)

@@ -9,6 +9,8 @@ AnnotationsT = dict[str, str]
 
 
 class DescriptorT(TypedDict):
+    """OCI content descriptor."""
+
     mediaType: str
     digest: str
     size: int
@@ -18,6 +20,8 @@ class DescriptorT(TypedDict):
 
 
 class ImageIndexT(TypedDict):
+    """OCI image index (manifest list)."""
+
     schemaVersion: int
     mediaType: str
     manifests: list[DescriptorT]
@@ -25,6 +29,8 @@ class ImageIndexT(TypedDict):
 
 
 class ManifestT(TypedDict):
+    """OCI image manifest."""
+
     schemaVersion: int
     mediaType: str
     config: DescriptorT
@@ -33,6 +39,8 @@ class ManifestT(TypedDict):
 
 
 class RenovateUpgradeT(TypedDict):
+    """Typed dict for a single Renovate tekton-bundle upgrade entry."""
+
     depName: str
     currentValue: str
     currentDigest: str

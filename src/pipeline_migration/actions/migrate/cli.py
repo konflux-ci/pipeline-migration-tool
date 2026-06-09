@@ -72,6 +72,7 @@ The following are examples of several scenariors:
 
 
 def arg_type_upgrades_file(value: str) -> Path:
+    """Validate that the upgrades file exists and return its Path."""
     p = Path(value)
     if not p.exists():
         raise argparse.ArgumentTypeError(f"Upgrades file {value} does not exist.")
@@ -79,6 +80,7 @@ def arg_type_upgrades_file(value: str) -> Path:
 
 
 def arg_type_pipeline_file(value: str) -> str:
+    """Validate that the pipeline file exists and is relative to the working directory."""
     p = Path(value)
     if not p.exists():
         raise argparse.ArgumentTypeError(f"Pipeline file does not exist: {value}")
@@ -91,6 +93,7 @@ def arg_type_pipeline_file(value: str) -> str:
 
 
 def arg_type_bundle_reference(value: str) -> str:
+    """Validate that the value is a valid bundle reference."""
     try:
         validate_bundle_ref(value)
     except ValueError as e:
@@ -99,6 +102,7 @@ def arg_type_bundle_reference(value: str) -> str:
 
 
 def register_cli(subparser) -> None:
+    """Register the migrate subcommand and its arguments."""
     migrate_parser = subparser.add_parser(
         "migrate",
         help="Discover and apply migrations for given task bundles upgrades.",
@@ -168,8 +172,10 @@ def register_cli(subparser) -> None:
 
 
 class DotTekton(Path):
+    """Path subclass for the .tekton directory with pipeline file discovery."""
 
     def list_pipeline_files(self) -> Iterable[Path]:
+        """Yield Pipeline and PipelineRun YAML files found in this directory."""
         for possible_yaml_file in self.glob("*.y[a]ml"):
             doc = None
             with suppress(ScannerError, IOError):
@@ -255,6 +261,7 @@ def generate_upgrades_data(new_bundles: list[str], pipeline_files: list[str]) ->
 
 
 def action(args) -> None:
+    """Execute the migrate command with the parsed CLI arguments."""
     try:
         _action_impl(args)
     except Exception:

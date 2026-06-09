@@ -6,6 +6,8 @@ class InvalidRenovateUpgradesData(ValueError):
 
 
 class MigrationResolveError(Exception):
+    """Raised when resolving migrations for a bundle upgrade fails."""
+
     def __init__(self, msg, bundle_upgrade: TaskBundleUpgrade, raw_exception: Exception) -> None:
         super().__init__(msg)
         self.bundle_upgrade = bundle_upgrade
@@ -13,6 +15,8 @@ class MigrationResolveError(Exception):
 
 
 class MigrationApplyError(Exception):
+    """Raised when applying a migration script to a pipeline file fails."""
+
     def __init__(
         self,
         msg: str,
@@ -29,4 +33,6 @@ class MigrationApplyError(Exception):
 
 
 class IncorrectMigrationAttachment(Exception):
+    """Raised when a migration is attached to an incorrect task bundle."""
+
     pass

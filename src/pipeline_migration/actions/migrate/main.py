@@ -37,6 +37,7 @@ from pipeline_migration.utils import file_checksum, is_true, load_yaml, dump_yam
 
 
 class MigrationFileOperation(PipelineFileOperation):
+    """Applies migration scripts to pipeline files."""
 
     def __init__(self, task_bundle_upgrades: list[TaskBundleUpgrade]):
         self._task_bundle_upgrades = task_bundle_upgrades
@@ -96,6 +97,7 @@ class MigrationFileOperation(PipelineFileOperation):
             raise ExceptionGroup("Apply migrations errors", errors)
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Apply migrations to a Pipeline file and preserve YAML formatting."""
         yaml_style = style
         origin_checksum = file_checksum(file_path)
         self._apply_migration(file_path)
@@ -110,6 +112,7 @@ class MigrationFileOperation(PipelineFileOperation):
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
+        """Apply migrations to a PipelineRun file via a temporary Pipeline extraction."""
         yaml_style = style
         original_pipeline_doc = loaded_doc
 
@@ -129,6 +132,7 @@ class MigrationFileOperation(PipelineFileOperation):
 
 
 class TransitionToModifyCommandOperation(MigrationFileOperation):
+    """Migration operation that uses pmt-modify when all scripts support it."""
 
     def __init__(self, task_bundle_upgrades: list[TaskBundleUpgrade]):
         super().__init__(task_bundle_upgrades)
@@ -150,6 +154,7 @@ class TransitionToModifyCommandOperation(MigrationFileOperation):
         )
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Apply migrations directly or via legacy path depending on transition state."""
         if self._transition_is_done:
             self._apply_migration(file_path)
         else:
@@ -158,6 +163,7 @@ class TransitionToModifyCommandOperation(MigrationFileOperation):
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
+        """Apply migrations directly or via legacy path depending on transition state."""
         if self._transition_is_done:
             self._apply_migration(file_path)
         else:
@@ -165,6 +171,7 @@ class TransitionToModifyCommandOperation(MigrationFileOperation):
 
 
 class TaskBundleUpgradesManager:
+    """Manages task bundle upgrades: collects, deduplicates, resolves, and applies migrations."""
 
     def __init__(self, upgrades: list[dict[str, Any]], resolver_class: type["Resolver"]) -> None:
         # Deduplicated task bundle upgrades. Key is the full bundle image with tag and digest.
@@ -176,6 +183,7 @@ class TaskBundleUpgradesManager:
 
     @property
     def package_files(self) -> list[PackageFile]:
+        """Return the list of package files with their associated upgrades."""
         return self._package_files
 
     @staticmethod
@@ -447,6 +455,7 @@ def has_migration_image(image_repo: str) -> bool:
 
 
 def update_bundles_in_pipelines(upgrades: list[dict[str, Any]]) -> None:
+    """Replace old task bundle references with new ones in pipeline YAML files."""
     package_files = TaskBundleUpgradesManager.collect_upgrades(upgrades)
     for package_file in package_files:
         pipeline_file = Path(package_file.file_path)

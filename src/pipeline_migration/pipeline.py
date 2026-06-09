@@ -21,14 +21,17 @@ class PipelineFileOperation:
     """Base class for handling Pipeline or PipelineRun YAML files"""
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Process a Pipeline YAML file."""
         raise NotImplementedError
 
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
+        """Process a PipelineRun YAML file."""
         raise NotImplementedError
 
     def handle(self, file_path: str) -> None:
+        """Load a YAML file and dispatch to the appropriate Pipeline or PipelineRun handler."""
         yaml_style = YAMLStyle.detect(file_path)
         doc = load_yaml(file_path, yaml_style)
         if not isinstance(doc, dict):
@@ -58,6 +61,7 @@ class PipelineFileOperation:
 
 
 def iterate_files_or_dirs(files_or_dirs: list[str]) -> Generator[Path]:
+    """Yield YAML file paths from the given files and directories."""
     for item in files_or_dirs:
         if not item:
             continue

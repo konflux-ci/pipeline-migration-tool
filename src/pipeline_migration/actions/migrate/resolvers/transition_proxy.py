@@ -14,6 +14,7 @@ from pipeline_migration.quay import QuayTagInfo
 
 
 class DecentralizationTransitionResolverProxy(Resolver):
+    """Proxy that delegates to the appropriate resolver based on repository layout."""
 
     def __init__(self):
         self.logger = logging.getLogger("migrate.resolver-proxy")

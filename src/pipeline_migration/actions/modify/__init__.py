@@ -10,6 +10,7 @@ Allows to modify existing resources in Konflux pipelines/pipeline runs.
 
 
 def register_cli(subparser) -> None:
+    """Register the modify subcommand and its sub-subcommands."""
     modify_parser = subparser.add_parser(
         "modify",
         help="Modify the specified resource",

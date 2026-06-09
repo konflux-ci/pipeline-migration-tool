@@ -11,6 +11,7 @@ logger = logging.getLogger("cli")
 
 
 def main() -> None:
+    """Parse CLI arguments and execute the requested subcommand."""
     parser = argparse.ArgumentParser(description="Pipeline migration tool for Konflux CI.")
     subparser = parser.add_subparsers(title="subcommands to manage build pipelines", required=True)
     register_migrate_cli(subparser)

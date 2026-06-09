@@ -10,6 +10,7 @@ logger = logging.getLogger("formatter")
 
 
 def register_cli(subparser) -> None:
+    """Register the format subcommand and its arguments."""
     format_parser: argparse.ArgumentParser = subparser.add_parser(
         "format", help="Format Konflux Pipeline and PipelineRun YAML files."
     )
@@ -26,6 +27,7 @@ def register_cli(subparser) -> None:
 
 
 def action(args) -> None:
+    """Execute the format command with the parsed CLI arguments."""
     formatter = FormatterFileOperation()
     for file_path in iterate_files_or_dirs(args.file_or_dir):
         logger.info("format %s", file_path)
@@ -33,13 +35,16 @@ def action(args) -> None:
 
 
 class FormatterFileOperation(PipelineFileOperation):
+    """Pipeline file operation that reformats YAML files to a consistent style."""
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Format a Pipeline YAML file."""
         self._format(file_path, loaded_doc, style)
 
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
+        """Format a PipelineRun YAML file."""
         self._format(file_path, loaded_doc, style)
 
     def _format(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:

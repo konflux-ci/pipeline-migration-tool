@@ -66,6 +66,7 @@ class EditYAMLEntry:
 
     @data.deleter
     def data(self):
+        """Clear the cached YAML data so it is reloaded on next access."""
         self._data = None
 
     def invalidate_yaml_data(self):
@@ -331,6 +332,7 @@ class EditYAMLEntry:
         self.invalidate_yaml_data()
 
     def _is_parent_dict(self, path_stack: PathStack) -> bool:
+        """Return True if the parent node in the path stack is a dict."""
         if len(path_stack) > 1:
             parent, _ = path_stack[-2]
             return isinstance(parent, dict)
@@ -353,6 +355,7 @@ class EditYAMLEntry:
         path_stack = copy.copy(path_stack)
 
         def find_next_sibling_line(node, index) -> int | None:
+            """Return the line number of the next sibling, or None if no sibling exists."""
             if isinstance(node, CommentedSeq):
                 assert isinstance(index, int)
                 if len(node) - 1 > index:
@@ -388,6 +391,7 @@ class EditYAMLEntry:
         return EOF
 
     def _gen_yaml_str(self, data: Any, col: int, seq_block: bool = False) -> str:
+        """Generate an indented YAML string for the given data at the specified column."""
         if seq_block:
             data = [data]
         yaml = create_yaml_obj(style=self.style)

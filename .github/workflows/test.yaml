@@ -45,7 +45,7 @@ jobs:
           python-version: '3.13'
       - name: Install dependencies
         run: make venv/create
-      - name: Run tests
+      - name: Run pytest via tox
         run: |
           source .venv/bin/activate
           tox -e py313

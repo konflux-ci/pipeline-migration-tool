@@ -22,6 +22,7 @@ def main() -> None:
 
 
 def entry_point():
+    """Entry point for the pmt CLI; returns 1 on failure."""
     try:
         main()
     except Exception as e:

@@ -56,7 +56,7 @@ class EditYAMLEntry:
         self._data = None
 
     @property
-    def data(self):
+    def data(self) -> Any:
         """Loaded yaml data, cached property
 
         :returns: YAML loaded data"""
@@ -330,7 +330,7 @@ class EditYAMLEntry:
         )
         self.invalidate_yaml_data()
 
-    def _is_parent_dict(self, path_stack):
+    def _is_parent_dict(self, path_stack: PathStack) -> bool:
         if len(path_stack) > 1:
             parent, _ = path_stack[-2]
             return isinstance(parent, dict)
@@ -387,7 +387,7 @@ class EditYAMLEntry:
 
         return EOF
 
-    def _gen_yaml_str(self, data: Any, col: int, seq_block=False) -> str:
+    def _gen_yaml_str(self, data: Any, col: int, seq_block: bool = False) -> str:
         if seq_block:
             data = [data]
         yaml = create_yaml_obj(style=self.style)

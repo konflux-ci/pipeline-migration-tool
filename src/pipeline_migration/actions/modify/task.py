@@ -50,7 +50,7 @@ class ParamType(Enum):
     string = "string"
     array = "array"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
@@ -61,7 +61,7 @@ class TaskNotFoundError(Exception):
 class TaskBase(PipelineFileOperation):
     """Base class for task handling"""
 
-    def __init__(self, task_name):
+    def __init__(self, task_name: str):
         super().__init__()
         self.task_name = task_name
 

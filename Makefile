@@ -21,7 +21,7 @@ deps/upgrade:
 .PHONY: venv/create venv/remove venv/recreate
 
 venv/create:
-	python3.12 -m venv --upgrade-deps .venv
+	python3 -m venv --upgrade-deps .venv
 	.venv/bin/python3 -m pip install -r requirements-test.txt
 	.venv/bin/python3 -m pip install pip-tools
 

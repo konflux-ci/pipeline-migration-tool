@@ -57,6 +57,13 @@ python3 -m mypy path/to/file.py
 - **Migrations** are shell scripts attached to task bundles as OCI artifacts. They are discovered via annotations (`dev.konflux-ci.task.has-migration`, `dev.konflux-ci.task.is-migration`).
 - Pipeline files live in `.tekton/` directories by convention and are either `Pipeline` or `PipelineRun` Kubernetes resources.
 
+## Design intent
+
+- **Minimal-diff YAML editing**: The `yamleditor` module edits pipeline YAML as raw text (line insertions, deletions, replacements) rather than parsing and re-serializing. This preserves user formatting, comments, and ordering so that PRs produced by `pmt` contain only semantically meaningful changes. Never use `ruamel.yaml` dump to write back pipeline files.
+- **OCI artifact-based migration discovery**: Migrations are shell scripts attached as OCI artifacts (referrers) to task bundle images. This keeps migrations co-located with the task versions they belong to, without requiring a separate registry or database. The annotation `dev.konflux-ci.task.has-migration` on the bundle signals that migrations exist; `dev.konflux-ci.task.is-migration` marks the migration artifact itself.
+- **Operation pattern for modify actions**: Each modify subcommand (add-param, remove-param, replace-value, etc.) is a subclass of `ModTaskOperation` or `ModGenericOperation`. The base class handles file iteration and YAML loading; subclasses implement `handle_pipeline_file()` with the specific transformation. This keeps CLI wiring separate from modification logic.
+- **Unattended execution**: The tool runs as a Renovate/Mintmaker post-upgrade command with no interactive input. All decisions must be derivable from CLI arguments and the pipeline file content.
+
 ## Release process
 
 Versions follow `0.minor.patch`. Bump the version in `src/pipeline_migration/__init__.py`. See the README for full release steps.

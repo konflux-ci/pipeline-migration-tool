@@ -11,3 +11,8 @@ local-tests/
 htmlcov/
 .mypy_cache/
 .pytest_cache/
+.env
+.DS_Store
+.vscode/
+*.py[cod]
+*.swo

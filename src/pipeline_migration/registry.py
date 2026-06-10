@@ -23,30 +23,39 @@ MEDIA_TYPE_OCI_IMAGE_LAYER_V1_TAR_GZ: Final = "application/vnd.oci.image.layer.v
 
 @dataclass
 class Descriptor:
+    """Wrapper around an OCI image descriptor providing typed access to its fields."""
+
     data: DescriptorT
 
     @property
     def digest(self) -> str:
+        """Return the digest of this descriptor."""
         return self.data["digest"]
 
     @property
     def annotations(self) -> AnnotationsT:
+        """Return the annotations of this descriptor, or an empty dict."""
         return self.data.get("annotations", {})
 
 
 @dataclass
 class ImageIndex:
+    """Wrapper around an OCI image index providing access to its manifest descriptors."""
+
     data: ImageIndexT
 
     @property
     def manifests(self) -> list[Descriptor]:
+        """Return the list of manifest descriptors in this image index."""
         return [Descriptor(data=item) for item in self.data["manifests"]]
 
 
 class Container(OrasContainer):
+    """Extended OCI container with referrers URL and tag-aware URI support."""
 
     @property
     def referrers_url(self) -> str:
+        """Return the OCI referrers API URL for this container."""
         return f"{self.registry}/v2/{self.api_prefix}/referrers/{self.digest}"
 
     @property
@@ -63,18 +72,21 @@ class Container(OrasContainer):
 
 
 class Registry(OrasRegistry):
+    """OCI registry client with blob fetching, artifact retrieval, and referrers support."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @ensure_container
     def get_blob(self, *args, **kwargs) -> Response:
+        """Fetch a blob from the registry and verify the response status."""
         response = super().get_blob(*args, **kwargs)
         self._check_200_response(response)
         return response
 
     @ensure_container
     def get_artifact(self, container: container_type, digest: str) -> str:
+        """Fetch an artifact blob by digest and return its content as a string."""
         resp = self.get_blob(container, digest)
         return resp.content.decode("utf-8")
 

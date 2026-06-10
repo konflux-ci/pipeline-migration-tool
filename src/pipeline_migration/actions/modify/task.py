@@ -47,10 +47,12 @@ The following are several examples with a Konflux task push-dockerfile:
 
 
 class ParamType(Enum):
+    """Enum for task parameter types: string or array."""
+
     string = "string"
     array = "array"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
@@ -61,7 +63,7 @@ class TaskNotFoundError(Exception):
 class TaskBase(PipelineFileOperation):
     """Base class for task handling"""
 
-    def __init__(self, task_name):
+    def __init__(self, task_name: str):
         super().__init__()
         self.task_name = task_name
 
@@ -73,6 +75,7 @@ class TaskBase(PipelineFileOperation):
         raise NotImplementedError
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Apply the task modification to a Pipeline file."""
         yaml_paths = [
             ["spec", "tasks"],
             ["spec", "finally"],
@@ -82,6 +85,7 @@ class TaskBase(PipelineFileOperation):
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
+        """Apply the task modification to a PipelineRun file."""
         yaml_paths = [
             ["spec", "pipelineSpec", "tasks"],
             ["spec", "pipelineSpec", "finally"],
@@ -122,6 +126,7 @@ class TaskBase(PipelineFileOperation):
 
 
 def register_cli(subparser) -> None:
+    """Register the 'task' subcommand and its sub-actions on the CLI parser."""
     mod_task_parser = subparser.add_parser(
         "task",
         help="Update the specified Konflux task",
@@ -200,6 +205,8 @@ def register_cli(subparser) -> None:
 
 
 class ModTaskAddParamOperation(TaskBase):
+    """Operation that adds or updates a parameter on a pipeline task."""
+
     def __init__(
         self,
         task_name: str,
@@ -301,6 +308,7 @@ class ModTaskAddParamOperation(TaskBase):
 
 
 def action_add_param(args) -> None:
+    """CLI action handler to add a parameter to a task in pipeline files."""
     value = args.param_value
     if args.param_type == ParamType.string:
         if len(value) > 1:
@@ -319,6 +327,8 @@ def action_add_param(args) -> None:
 
 
 class ModTaskRemoveParamOperation(TaskBase):
+    """Operation that removes a parameter from a pipeline task."""
+
     def __init__(
         self,
         task_name: str,
@@ -380,6 +390,7 @@ class ModTaskRemoveParamOperation(TaskBase):
 
 
 def action_remove_param(args) -> None:
+    """CLI action handler to remove a parameter from a task in pipeline files."""
     search_places = [path for path in args.file_or_dir if path]
     relative_tekton_dir = Path("./.tekton")
     if not search_places and relative_tekton_dir.exists():
@@ -391,6 +402,8 @@ def action_remove_param(args) -> None:
 
 
 class ModTaskMatrixAddParamOperation(TaskBase):
+    """Operation that adds or updates a matrix parameter on a pipeline task."""
+
     def __init__(
         self,
         task_name: str,
@@ -512,6 +525,7 @@ class ModTaskMatrixAddParamOperation(TaskBase):
 
 
 def action_matrix_add_param(args) -> None:
+    """CLI action handler to add a matrix parameter to a task in pipeline files."""
     value = args.param_value
     if args.param_type == ParamType.string:
         if len(value) > 1:
@@ -530,6 +544,8 @@ def action_matrix_add_param(args) -> None:
 
 
 class ModTaskMatrixRemoveParamOperation(TaskBase):
+    """Operation that removes a matrix parameter from a pipeline task."""
+
     def __init__(
         self,
         task_name: str,
@@ -603,6 +619,7 @@ class ModTaskMatrixRemoveParamOperation(TaskBase):
 
 
 def action_matrix_remove_param(args) -> None:
+    """CLI action handler to remove a matrix parameter from a task in pipeline files."""
     search_places = [path for path in args.file_or_dir if path]
     relative_tekton_dir = Path("./.tekton")
     if not search_places and relative_tekton_dir.exists():

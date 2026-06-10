@@ -11,6 +11,7 @@ logger = logging.getLogger("cli")
 
 
 def main() -> None:
+    """Parse CLI arguments and execute the requested subcommand."""
     parser = argparse.ArgumentParser(description="Pipeline migration tool for Konflux CI.")
     subparser = parser.add_subparsers(title="subcommands to manage build pipelines", required=True)
     register_migrate_cli(subparser)
@@ -22,6 +23,7 @@ def main() -> None:
 
 
 def entry_point():
+    """Entry point for the pmt CLI; returns 1 on failure."""
     try:
         main()
     except Exception as e:

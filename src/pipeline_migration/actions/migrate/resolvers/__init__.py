@@ -125,6 +125,7 @@ def drop_out_of_order_versions(
     new_digest = bundle_upgrade.new_digest
 
     def _parse_version(tag_name: str) -> Version | None:
+        """Parse the version prefix from a tag name, or return None on failure."""
         try:
             return parse_version(tag_name.split("-")[0])
         except InvalidVersion:
@@ -156,6 +157,7 @@ def drop_out_of_order_versions(
 
 
 def only_tags_pinned_by_version_revision(tags_info: Iterable[dict]) -> Generator[dict, Any, None]:
+    """Yield only tags whose names match the version-revision pattern."""
     regex = re.compile(TASK_TAG_REGEXP)
     for tag_info in tags_info:
         if regex.match(tag_info["name"]):
@@ -187,6 +189,7 @@ def expand_versions(from_: str, to: str) -> list[str]:
 
 
 def list_bundle_tags(bundle_upgrade: TaskBundleUpgrade) -> list[dict]:
+    """Fetch and return all active tags for the version range of a bundle upgrade."""
     versions = expand_versions(bundle_upgrade.current_value, bundle_upgrade.new_value)
     tags: list[dict] = []
     c = Container(bundle_upgrade.dep_name)

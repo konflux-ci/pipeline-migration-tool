@@ -24,19 +24,24 @@ logger = logging.getLogger("utils")
 
 
 def is_true(value: str) -> bool:
+    """Return True if the string value represents a boolean true."""
     return value.strip().lower() == "true"
 
 
 @dataclass
 class BlockSequenceIndentation:
+    """Tracks block sequence indentation levels found in a YAML document."""
+
     indentations: dict[int, int] = field(default_factory=dict)
 
     @property
     def is_consistent(self) -> bool:
+        """Return True if all block sequences use the same indentation level."""
         return len(self.levels) == 1
 
     @property
     def levels(self) -> list[int]:
+        """Return the distinct indentation levels found."""
         return list(self.indentations.keys())
 
     def indent(self, level: int) -> None:
@@ -46,16 +51,21 @@ class BlockSequenceIndentation:
 
 @dataclass
 class _NodePath:
+    """Internal helper to track a node and its field name during YAML tree traversal."""
+
     node: CommentedBase
     field: str = ""
 
 
 def is_flow_style_seq(node: CommentedSeq) -> bool:
+    """Return True if the YAML sequence node uses flow style formatting."""
     return len(node) == 0 or node.fa.flow_style()
 
 
 @dataclass
 class YAMLStyle:
+    """Detected YAML formatting style used to preserve original file layout."""
+
     indentation: BlockSequenceIndentation
 
     preserve_quotes: bool = True
@@ -90,12 +100,14 @@ class YAMLStyle:
 
     @classmethod
     def detect(cls, file_path: FilePath) -> "YAMLStyle":
+        """Detect the YAML formatting style from an existing file."""
         doc = load_yaml(file_path)
         indentation = cls._detect_block_sequence_indentation(doc)
         return cls(indentation=indentation)
 
 
 def create_yaml_obj(style: YAMLStyle | None = None) -> YAML:
+    """Create a ruamel YAML instance configured with the given style."""
     yaml = YAML()
     if style is None:
         return yaml
@@ -113,16 +125,19 @@ def create_yaml_obj(style: YAMLStyle | None = None) -> YAML:
 
 
 def load_yaml(yaml_file: FilePath, style: YAMLStyle | None = None) -> Any:
+    """Load and parse a YAML file, optionally applying a style configuration."""
     with open(yaml_file, "r", encoding="utf-8") as f:
         return create_yaml_obj(style).load(f)
 
 
 def dump_yaml(yaml_file: FilePath, data: Any, style: YAMLStyle | None = None) -> None:
+    """Dump YAML data to a file, optionally applying a style configuration."""
     with open(yaml_file, "w", encoding="utf-8") as f:
         create_yaml_obj(style).dump(data, f)
 
 
 def file_checksum(file_path: FilePath) -> str:
+    """Compute and return the SHA-256 hex digest of a file."""
     with open(file_path, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()
 

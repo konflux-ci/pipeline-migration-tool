@@ -23,6 +23,8 @@ from pipeline_migration.registry import Container, Registry
 
 @dataclass
 class MigrationImageTag:
+    """Parsed components of a migration image tag."""
+
     prefix: str
     version: str
     file_checksum: str
@@ -30,6 +32,7 @@ class MigrationImageTag:
 
     @classmethod
     def parse(cls, tag: str) -> "MigrationImageTag | None":
+        """Parse a tag string into a MigrationImageTag, or return None if it does not match."""
         match = MIGRATION_IMAGE_TAG_REGEX.match(tag)
         if not match:
             return None
@@ -43,6 +46,7 @@ class MigrationImageTag:
 
 
 class MigrationImagesResolver(Resolver):
+    """Resolver that discovers migrations from tagged OCI images in the registry."""
 
     def _resolve_migrations(
         self,
@@ -155,5 +159,6 @@ class MigrationImagesResolver(Resolver):
                 return f.read()
 
     def _resolve_task(self, bundle_upgrade: TaskBundleUpgrade) -> None:
+        """Resolve and collect migrations for a single bundle upgrade."""
         for tb_migration in self._resolve_migrations(bundle_upgrade, []):
             bundle_upgrade.migrations.append(tb_migration)

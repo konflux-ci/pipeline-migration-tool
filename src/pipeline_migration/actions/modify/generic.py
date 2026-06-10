@@ -126,6 +126,7 @@ def yaml_value_type(param: str) -> Any:
 
 
 def register_cli(subparser) -> None:
+    """Register the 'generic' subcommand and its sub-actions on the CLI parser."""
     mod_generic_parser = subparser.add_parser(
         "generic",
         help=(
@@ -215,6 +216,8 @@ class ModGenericBase(PipelineFileOperation):
         self.yaml_path = yaml_path
 
     def validate_yaml_path(self, loaded_doc: Any, allow_scalar: bool = False):
+        """Validate that the YAML path exists and points to a valid node type."""
+
         def get_path_doc(ypath):
             """:raises KeyError: when path doesn't exist"""
             tmp_doc = copy.copy(loaded_doc)
@@ -237,16 +240,20 @@ class ModGenericBase(PipelineFileOperation):
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
+        """Handle a PipelineRun file by delegating to the Pipeline handler."""
         # the same implementation as pipeline
         self.handle_pipeline_file(file_path, loaded_doc, style)
 
 
 class ModGenericInsert(ModGenericBase):
+    """Operation that inserts a value at a given YAML path."""
+
     def __init__(self, yaml_path: YAMLPath, value: Any):
         super().__init__(yaml_path)
         self.value = value
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Insert the configured value at the YAML path in the pipeline file."""
         logger.info("Inserting content into YAML path %s in file %s", self.yaml_path, file_path)
         self.validate_yaml_path(loaded_doc)
         yamledit = EditYAMLEntry(file_path, style=style)
@@ -254,6 +261,7 @@ class ModGenericInsert(ModGenericBase):
 
 
 def action_insert(args) -> None:
+    """CLI action handler to insert content at a YAML path in pipeline files."""
     search_places = [path for path in args.file_or_dir if path]
     relative_tekton_dir = Path("./.tekton")
     if not search_places and relative_tekton_dir.exists():
@@ -268,11 +276,14 @@ def action_insert(args) -> None:
 
 
 class ModGenericReplace(ModGenericBase):
+    """Operation that replaces a value at a given YAML path."""
+
     def __init__(self, yaml_path: YAMLPath, value: Any):
         super().__init__(yaml_path)
         self.value = value
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Replace the value at the YAML path in the pipeline file."""
         logger.info("Replacing content at YAML path %s in file %s", self.yaml_path, file_path)
         self.validate_yaml_path(loaded_doc, allow_scalar=True)
         yamledit = EditYAMLEntry(file_path, style=style)
@@ -280,6 +291,7 @@ class ModGenericReplace(ModGenericBase):
 
 
 def action_replace(args) -> None:
+    """CLI action handler to replace content at a YAML path in pipeline files."""
     search_places = [path for path in args.file_or_dir if path]
     relative_tekton_dir = Path("./.tekton")
     if not search_places and relative_tekton_dir.exists():
@@ -294,10 +306,13 @@ def action_replace(args) -> None:
 
 
 class ModGenericRemove(ModGenericBase):
+    """Operation that removes a value at a given YAML path."""
+
     def __init__(self, yaml_path: YAMLPath):
         super().__init__(yaml_path)
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        """Remove the node at the YAML path in the pipeline file."""
         logger.info("Removing YAML path %s in file %s", self.yaml_path, file_path)
         self.validate_yaml_path(loaded_doc, allow_scalar=True)
         yamledit = EditYAMLEntry(file_path, style=style)
@@ -305,6 +320,7 @@ class ModGenericRemove(ModGenericBase):
 
 
 def action_remove(args) -> None:
+    """CLI action handler to remove content at a YAML path in pipeline files."""
     search_places = [path for path in args.file_or_dir if path]
     relative_tekton_dir = Path("./.tekton")
     if not search_places and relative_tekton_dir.exists():

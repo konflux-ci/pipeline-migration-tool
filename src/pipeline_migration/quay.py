@@ -9,12 +9,15 @@ from pipeline_migration.registry import Container
 
 @dataclass
 class QuayTagInfo:
+    """Holds name, digest, and timestamp for a Quay repository tag."""
+
     name: str
     manifest_digest: str
     start_ts: int
 
     @classmethod
     def from_tag_info(cls, tag_info: dict) -> "QuayTagInfo":
+        """Construct a QuayTagInfo from a Quay API tag dict."""
         return cls(
             name=tag_info["name"],
             manifest_digest=tag_info["manifest_digest"],
@@ -53,6 +56,7 @@ def list_active_repo_tags(
 
 
 def get_active_tag(c: Container, name: str) -> dict | None:
+    """Return the active tag with the given name, or None if not found."""
     try:
         return next(list_active_repo_tags(c, tag_name=name))
     except StopIteration:

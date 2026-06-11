@@ -325,6 +325,9 @@ git checkout -b <test branch>  # setup.sh commits changes to the repo
 
 # Empty the image repositories of task-clone and task-lint
 
+# Log in to quay.io
+
+# For example, QUAY_NAMESPACE="mytestworkload" results in images like quay.io/mytestworkload/task-*
 BUILD_DEFS_REPO="<absolute path to build-definitions>" \
 QUAY_NAMESPACE="<quay namespace passed to build-definitions/hack/build-and-push.sh>" \
 ./hack/integration-test/setup.sh

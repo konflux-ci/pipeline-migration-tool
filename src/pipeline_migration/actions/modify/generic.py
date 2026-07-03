@@ -7,7 +7,6 @@ from typing import Any, Final
 from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from pipeline_migration.yamleditor import EditYAMLEntry, YAMLPath
-from pipeline_migration.types import FilePath
 from pipeline_migration.utils import YAMLStyle, create_yaml_obj, load_yaml
 from pipeline_migration.pipeline import iterate_files_or_dirs
 
@@ -246,9 +245,9 @@ class ModGenericBase:
         doc = load_yaml(file_path, yaml_style)
         if not isinstance(doc, dict):
             raise UnsupportedYAML(f"Given file {file_path} is not a YAML mapping.")
-        self.handle_generic_operation(file_path, doc, yaml_style)
+        self.handle_generic_operation(Path(file_path), doc, yaml_style)
 
-    def handle_generic_operation(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+    def handle_generic_operation(self, file_path: Path, loaded_doc: Any, style: YAMLStyle) -> None:
         """Override this in subclasses."""
         raise NotImplementedError
 
@@ -260,7 +259,7 @@ class ModGenericInsert(ModGenericBase):
         super().__init__(yaml_path)
         self.value = value
 
-    def handle_generic_operation(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+    def handle_generic_operation(self, file_path: Path, loaded_doc: Any, style: YAMLStyle) -> None:
         """Insert the configured value at the YAML path in the pipeline file."""
         logger.info("Inserting content into YAML path %s in file %s", self.yaml_path, file_path)
         self.validate_yaml_path(loaded_doc)
@@ -290,7 +289,7 @@ class ModGenericReplace(ModGenericBase):
         super().__init__(yaml_path)
         self.value = value
 
-    def handle_generic_operation(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+    def handle_generic_operation(self, file_path: Path, loaded_doc: Any, style: YAMLStyle) -> None:
         """Replace the value at the YAML path in the pipeline file."""
         logger.info("Replacing content at YAML path %s in file %s", self.yaml_path, file_path)
         self.validate_yaml_path(loaded_doc, allow_scalar=True)
@@ -319,7 +318,7 @@ class ModGenericRemove(ModGenericBase):
     def __init__(self, yaml_path: YAMLPath):
         super().__init__(yaml_path)
 
-    def handle_generic_operation(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+    def handle_generic_operation(self, file_path: Path, loaded_doc: Any, style: YAMLStyle) -> None:
         """Remove the node at the YAML path in the pipeline file."""
         logger.info("Removing YAML path %s in file %s", self.yaml_path, file_path)
         self.validate_yaml_path(loaded_doc, allow_scalar=True)

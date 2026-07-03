@@ -152,6 +152,93 @@ def verify_yaml_path_not_exists(file_path: Path, yaml_path: list):
     assert False, f"Path {yaml_path} still exists in {file_path}"
 
 
+@pytest.fixture
+def plain_yaml_dir(tmp_path):
+    """Create a directory with a non-pipeline YAML file."""
+    yaml_dir = tmp_path / "configs"
+    yaml_dir.mkdir()
+
+    content = dedent("""\
+        database:
+          host: localhost
+          port: 5432
+          credentials:
+            user: admin
+            password: secret
+          replicas:
+            - name: replica-1
+              region: us-east
+            - name: replica-2
+              region: eu-west
+        """)
+
+    yaml_file = yaml_dir / "config.yaml"
+    yaml_file.write_text(content)
+
+    return yaml_dir
+
+
+class TestModifyGenericNonPipelineYAML:
+    """Test that modify generic works on arbitrary YAML, not just Pipeline resources."""
+
+    def test_insert(self, plain_yaml_dir, monkeypatch):
+        """Test inserting into a non-pipeline YAML file."""
+        cmd = [
+            "pmt",
+            "modify",
+            "--file-or-dir",
+            str(plain_yaml_dir),
+            "generic",
+            "insert",
+            '["database", "replicas"]',
+            '{"name": "replica-3", "region": "ap-south"}',
+        ]
+
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+
+        doc = load_yaml(plain_yaml_dir / "config.yaml")
+        assert len(doc["database"]["replicas"]) == 3
+        assert doc["database"]["replicas"][2]["name"] == "replica-3"
+
+    def test_replace(self, plain_yaml_dir, monkeypatch):
+        """Test replacing a value in a non-pipeline YAML file."""
+        cmd = [
+            "pmt",
+            "modify",
+            "--file-or-dir",
+            str(plain_yaml_dir),
+            "generic",
+            "replace",
+            '["database", "host"]',
+            '"db.example.com"',
+        ]
+
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+
+        doc = load_yaml(plain_yaml_dir / "config.yaml")
+        assert doc["database"]["host"] == "db.example.com"
+
+    def test_remove(self, plain_yaml_dir, monkeypatch):
+        """Test removing a value from a non-pipeline YAML file."""
+        cmd = [
+            "pmt",
+            "modify",
+            "--file-or-dir",
+            str(plain_yaml_dir),
+            "generic",
+            "remove",
+            '["database", "credentials"]',
+        ]
+
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+
+        doc = load_yaml(plain_yaml_dir / "config.yaml")
+        assert "credentials" not in doc["database"]
+
+
 class TestModifyGenericInsert:
     """Test cases for the modify generic insert CLI command."""
 

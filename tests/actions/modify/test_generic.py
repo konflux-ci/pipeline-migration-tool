@@ -6,6 +6,7 @@ from pipeline_migration.actions.modify.generic import (
     ModGenericInsert,
     ModGenericReplace,
     ModGenericRemove,
+    UnsupportedYAML,
     YAMLPathNotFoundError,
     _yaml_path_from_param,
     _yaml_from_value_param,
@@ -216,7 +217,7 @@ class TestModGenericInsert:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -242,7 +243,7 @@ class TestModGenericInsert:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -274,7 +275,7 @@ class TestModGenericInsert:
         loaded_doc = load_yaml(pipeline_yaml_file)
         style = YAMLStyle.detect(pipeline_yaml_file)
 
-        op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -343,7 +344,7 @@ class TestModGenericInsert:
         loaded_doc = load_yaml(pipeline_run_yaml_file)
         style = YAMLStyle.detect(pipeline_run_yaml_file)
 
-        op.handle_pipeline_run_file(pipeline_run_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_run_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -385,7 +386,7 @@ class TestModGenericInsert:
         loaded_doc = load_yaml(yaml_file)
         style = YAMLStyle.detect(yaml_file)
 
-        op.handle_pipeline_file(yaml_file, loaded_doc, style)
+        op.handle_generic_operation(yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             items:
@@ -410,7 +411,7 @@ class TestModGenericInsert:
         loaded_doc = load_yaml(yaml_file)
         style = YAMLStyle.detect(yaml_file)
 
-        op.handle_pipeline_file(yaml_file, loaded_doc, style)
+        op.handle_generic_operation(yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             numbers:
@@ -436,7 +437,7 @@ class TestModGenericInsert:
         style = YAMLStyle.detect(yaml_file)
 
         with pytest.raises(ValueError, match="Only dict values can be inserted into a dict"):
-            op.handle_pipeline_file(yaml_file, loaded_doc, style)
+            op.handle_generic_operation(yaml_file, loaded_doc, style)
 
 
 class TestModGenericReplace:
@@ -458,7 +459,7 @@ class TestModGenericReplace:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -484,7 +485,7 @@ class TestModGenericReplace:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -514,7 +515,7 @@ class TestModGenericReplace:
         loaded_doc = load_yaml(pipeline_yaml_file)
         style = YAMLStyle.detect(pipeline_yaml_file)
 
-        op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -551,7 +552,7 @@ class TestModGenericReplace:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -576,7 +577,7 @@ class TestModGenericReplace:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -611,7 +612,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -633,7 +634,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -656,7 +657,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(pipeline_yaml_file)
         style = YAMLStyle.detect(pipeline_yaml_file)
 
-        op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -688,7 +689,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(pipeline_yaml_file)
         style = YAMLStyle.detect(pipeline_yaml_file)
 
-        op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -721,7 +722,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -745,7 +746,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(pipeline_yaml_file)
         style = YAMLStyle.detect(pipeline_yaml_file)
 
-        op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -781,7 +782,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(simple_yaml_file)
         style = YAMLStyle.detect(simple_yaml_file)
 
-        op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             root:
@@ -805,7 +806,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(pipeline_yaml_file)
         style = YAMLStyle.detect(pipeline_yaml_file)
 
-        op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -841,7 +842,7 @@ class TestModGenericRemove:
         loaded_doc = load_yaml(pipeline_yaml_file)
         style = YAMLStyle.detect(pipeline_yaml_file)
 
-        op.handle_pipeline_file(pipeline_yaml_file, loaded_doc, style)
+        op.handle_generic_operation(pipeline_yaml_file, loaded_doc, style)
 
         expected = dedent("""\
             apiVersion: tekton.dev/v1
@@ -872,6 +873,41 @@ class TestModGenericRemove:
         assert actual == expected
 
 
+class TestModGenericBaseHandle:
+    """Test cases for ModGenericBase.handle() method."""
+
+    def test_handle_non_pipeline_yaml(self, simple_yaml_file):
+        """Test that handle() works on arbitrary YAML, not just Pipeline resources."""
+        op = ModGenericInsert(["root", "level1", "config"], {"setting3": "value3"})
+
+        op.handle(str(simple_yaml_file))
+
+        expected = dedent("""\
+            root:
+              level1:
+                items:
+                  - name: item1
+                    value: 1
+                  - name: item2
+                    value: 2
+                config:
+                  setting1: "value1"
+                  setting2: "value2"
+                  setting3: value3
+            """)
+
+        actual = read_file_content(simple_yaml_file)
+        assert actual == expected
+
+    def test_handle_unsupported_yaml(self, create_yaml_file):
+        """Test that handle() raises UnsupportedYAML for non-mapping YAML."""
+        yaml_file = create_yaml_file("hello\n")
+        op = ModGenericInsert(["items"], "item3")
+
+        with pytest.raises(UnsupportedYAML, match="is not a YAML mapping"):
+            op.handle(str(yaml_file))
+
+
 class TestErrorHandling:
     """Test error handling scenarios."""
 
@@ -882,7 +918,7 @@ class TestErrorHandling:
         style = YAMLStyle.detect(simple_yaml_file)
 
         with pytest.raises(YAMLPathNotFoundError):
-            op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+            op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
     def test_replace_invalid_path(self, simple_yaml_file):
         """Test replace operation with invalid path."""
@@ -891,7 +927,7 @@ class TestErrorHandling:
         style = YAMLStyle.detect(simple_yaml_file)
 
         with pytest.raises(YAMLPathNotFoundError):
-            op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+            op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
     def test_remove_invalid_path(self, simple_yaml_file):
         """Test remove operation with invalid path."""
@@ -900,7 +936,7 @@ class TestErrorHandling:
         style = YAMLStyle.detect(simple_yaml_file)
 
         with pytest.raises(YAMLPathNotFoundError):
-            op.handle_pipeline_file(simple_yaml_file, loaded_doc, style)
+            op.handle_generic_operation(simple_yaml_file, loaded_doc, style)
 
     def test_path_to_scalar_value(self, simple_yaml_file):
         """Test operations when path points to scalar value."""

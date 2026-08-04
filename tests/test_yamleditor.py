@@ -1361,6 +1361,231 @@ class TestEditYAMLEntryComments:
             """)
         assert read_file_content(comments_yaml_file) == expected
 
+    def test_replace_scalar_preserves_inter_task_comment(self, create_yaml_file):
+        """Comment between tasks stays at the list-item indentation level."""
+        content = dedent("""\
+            spec:
+              tasks:
+                - name: clair-scan
+                  when:
+                  - input: $(params.skip-checks)
+                    operator: in
+                    values:
+                    - "false"
+                  taskRef:
+                    params:
+                    - name: name
+                      value: clair-scan
+                    resolver: bundles
+                # SAST analysis
+                - name: sast-snyk-check
+                  taskRef:
+                    resolver: bundles
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "tasks", 0, "name"], "roxtl-scan")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        comment_line = next(ln for ln in lines if "# SAST analysis" in ln)
+        assert comment_line == "    # SAST analysis"
+
+    def test_replace_scalar_preserves_end_of_task_comment(self, create_yaml_file):
+        """Comment at end of a task block stays at the key indentation level."""
+        content = dedent("""\
+            spec:
+              tasks:
+                - name: clair-scan
+                  when:
+                  - input: $(params.skip-checks)
+                    operator: in
+                    values:
+                    - "false"
+                  taskRef:
+                    params:
+                    - name: name
+                      value: clair-scan
+                    resolver: bundles
+                  # SAST analysis
+                - name: sast-snyk-check
+                  taskRef:
+                    resolver: bundles
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "tasks", 0, "name"], "roxtl-scan")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        comment_line = next(ln for ln in lines if "# SAST analysis" in ln)
+        assert comment_line == "      # SAST analysis"
+
+    def test_replace_scalar_preserves_intra_task_comment(self, create_yaml_file):
+        """Comment between keys inside a task block keeps its indentation."""
+        content = dedent("""\
+            spec:
+              tasks:
+                - name: clair-scan
+                  # SAST analysis
+                  taskRef:
+                    params:
+                    - name: name
+                      value: clair-scan
+                    resolver: bundles
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "tasks", 0, "name"], "roxtl-scan")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        comment_line = next(ln for ln in lines if "# SAST analysis" in ln)
+        assert comment_line == "      # SAST analysis"
+
+    def test_replace_scalar_preserves_block_scalar_hash_lines(self, create_yaml_file):
+        """Lines starting with # inside block scalars must not have indentation stripped."""
+        content = dedent("""\
+            spec:
+              tasks:
+                - name: clair-scan
+                  params:
+                    - name: custom-script
+                      value: |
+                        #!/usr/bin/env bash
+                        # Set up environment
+                        echo "scanning"
+                        # Run the scan
+                        make scan
+                  taskRef:
+                    params:
+                    - name: name
+                      value: clair-scan
+                    resolver: bundles
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "tasks", 0, "name"], "roxtl-scan")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        shebang_line = next(ln for ln in lines if "#!/usr/bin/env bash" in ln)
+        setup_line = next(ln for ln in lines if "# Set up environment" in ln)
+        scan_line = next(ln for ln in lines if "# Run the scan" in ln)
+        assert shebang_line == "          #!/usr/bin/env bash"
+        assert setup_line == "          # Set up environment"
+        assert scan_line == "          # Run the scan"
+
+    def test_replace_scalar_with_false_multiline_marker(self, create_yaml_file):
+        """A value like :>3 must not be mistaken for a block scalar indicator."""
+        content = dedent("""\
+            spec:
+              pipelineSpec:
+                tasks:
+                - name: foo
+                  wouldYouBelieveThisIsAString: :>3
+                  # some comment
+                  taskRef:
+                    params:
+                    - name: name
+                      value: foo
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "pipelineSpec", "tasks", 0, "name"], "bar")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        comment_line = next(ln for ln in lines if "# some comment" in ln)
+        assert comment_line == "      # some comment"
+
+    def test_replace_scalar_preserves_inline_comment_spacing(self, create_yaml_file):
+        """An inline comment on a sibling key must keep its original spacing."""
+        content = dedent("""\
+            spec:
+              pipelineSpec:
+                tasks:
+                - name: foo
+                  taskRef:  # some comment
+                    params:
+                    - name: name
+                      value: foo
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "pipelineSpec", "tasks", 0, "name"], "bar")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        comment_line = next(ln for ln in lines if "# some comment" in ln)
+        assert "taskRef:  # some comment" in comment_line
+
+    def test_replace_scalar_with_twospace_list_indent(self, create_yaml_file):
+        """Comment indentation is preserved with 2-space block sequence indentation."""
+        content = dedent("""\
+            spec:
+              pipelineSpec:
+                tasks:
+                  - name: foo
+                    # some comment
+                    taskRef:
+                      params:
+                        - name: name
+                          value: foo
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "pipelineSpec", "tasks", 0, "name"], "bar")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        comment_line = next(ln for ln in lines if "# some comment" in ln)
+        assert comment_line == "        # some comment"
+
+    def test_replace_scalar_with_block_scalar_inline_comment(self, create_yaml_file):
+        """Inline comment on a block scalar indicator (|  # hello) is preserved.
+
+        ruamel.yaml stores these comments as plain str objects in ca.items,
+        not as CommentToken.  Without a guard for str, _adjust_comment_token
+        crashes with AttributeError on token.value.
+        """
+        content = dedent("""\
+            spec:
+              tasks:
+                - name: clair-scan
+                  params:
+                    - name: custom-script
+                      value: |  # hello
+                        echo "scanning"
+                        # Run the scan
+                        make scan
+                  taskRef:
+                    params:
+                    - name: name
+                      value: clair-scan
+                    resolver: bundles
+            """)
+        yaml_file = create_yaml_file(content)
+        editor = EditYAMLEntry(yaml_file)
+
+        editor.replace(["spec", "tasks", 0, "name"], "roxtl-scan")
+
+        result = read_file_content(yaml_file)
+        lines = result.splitlines()
+        name_line = next(ln for ln in lines if "roxtl-scan" in ln)
+        assert name_line == "    - name: roxtl-scan"
+        scalar_line = next(ln for ln in lines if "# hello" in ln)
+        assert "value: |  # hello" in scalar_line
+        scan_line = next(ln for ln in lines if "# Run the scan" in ln)
+        assert scan_line == "          # Run the scan"
+
 
 class TestEditYAMLEntryFlowStyle:
     """Tests for handling partial flow-style YAML structures."""

@@ -29,6 +29,70 @@ PathStack: TypeAlias = List[Tuple[CommentedSeq | CommentedMap, str | int | None]
 EOF = -1
 
 
+def _adjust_comment_token(token: Any, offset: int) -> None:
+    """Shift a CommentToken's column position and embedded whitespace left by ``offset``.
+
+    Handles None (empty slot), str (bare whitespace stored by ruamel), and
+    CommentToken objects.  ``offset`` is the absolute column the subtree
+    originally started at; subtracting it realigns comments to column 0.
+    """
+    if token is None or isinstance(token, str):  # ruamel stores some slots as plain str
+        return
+    if hasattr(token, "start_mark") and token.start_mark is not None:
+        token.start_mark.column = max(0, token.start_mark.column - offset)
+    value = token.value
+    if isinstance(value, str) and "\n" in value:  # multi-line: fix embedded indentation
+        lines = value.split("\n")
+        adjusted: list[str] = []
+        for line in lines:
+            stripped = line.lstrip(" ")
+            indent = len(line) - len(stripped)
+            adjusted.append(" " * max(0, indent - offset) + stripped)
+        token.value = "\n".join(adjusted)
+
+
+def _adjust_comment_columns(node: Any, offset: int) -> None:
+    """Recursively shift CommentToken column positions by ``-offset``.
+
+    ruamel.yaml bakes absolute columns into CommentToken objects.  When a
+    subtree is re-serialized at column 0, code lines shift but comments don't.
+    This walk visits CommentedMap/CommentedSeq nodes (via ``ca``) and corrects
+    every token.  Block-scalar content (``|``/``>``) lives in scalar values,
+    not CommentTokens, so it is unaffected.
+    """
+    if offset <= 0:
+        return
+
+    if hasattr(node, "ca"):  # "ca" = ruamel CommentAttribute
+        ca = node.ca
+        if ca.comment:
+            _adjust_comment_token(ca.comment[0], offset)  # end-of-line comment
+            if len(ca.comment) > 1 and ca.comment[1]:
+                for tok in ca.comment[1]:  # block of preceding comments
+                    _adjust_comment_token(tok, offset)
+        for comments in ca.items.values():  # per-key/index comment tuples
+            for entry in comments:
+                if entry is None:
+                    continue
+                if isinstance(entry, list):  # slot holds multiple tokens
+                    for tok in entry:
+                        _adjust_comment_token(tok, offset)
+                else:
+                    _adjust_comment_token(entry, offset)
+        if ca.end:  # trailing comments after last child
+            for tok in ca.end:
+                _adjust_comment_token(tok, offset)
+
+    # Recurse into children: ca only holds comments for THIS node;
+    # nested dicts/lists have their own ca with their own tokens.
+    if isinstance(node, dict):
+        for v in node.values():
+            _adjust_comment_columns(v, offset)
+    elif isinstance(node, list):
+        for item in node:
+            _adjust_comment_columns(item, offset)
+
+
 class EditYAMLEntry:
     """Provides manipulation interface to YAML files using direct writes
     into YAML file, without regenerating the whole YAML content.
@@ -391,10 +455,26 @@ class EditYAMLEntry:
         return EOF
 
     def _gen_yaml_str(self, data: Any, col: int, seq_block: bool = False) -> str:
-        """Generate an indented YAML string for the given data at the specified column."""
+        """Generate an indented YAML string for the given data at the specified column.
+
+        Comment columns are pre-adjusted because ruamel.yaml bakes absolute
+        column positions into CommentToken objects. When a subtree loaded from
+        a parent is dumped in isolation, code lines are re-indented by the
+        emitter but comment positions are not, causing them to shift.
+        """
+        if col > 0:
+            data = copy.deepcopy(data)  # avoid mutating caller's comment metadata
         if seq_block:
             data = [data]
         yaml = create_yaml_obj(style=self.style)
+        # The dump indents `- ` by sequence_dash_offset, which textwrap.dedent
+        # later strips from *all* lines including comments. Reduce the comment
+        # adjustment accordingly so the net result lands comments at their
+        # original column.
+        comment_offset = col
+        if seq_block:
+            comment_offset = max(0, col - yaml.sequence_dash_offset)
+        _adjust_comment_columns(data, comment_offset)
         stream = StringIO()
         yaml.dump(
             data,

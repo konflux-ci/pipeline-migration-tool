@@ -1,6 +1,7 @@
 import itertools
 import logging
 import re
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Final
 
@@ -11,7 +12,8 @@ from ruamel.yaml.comments import CommentedSeq
 
 from pipeline_migration.cli import entry_point
 from pipeline_migration.pipeline import PipelineFileOperation
-from pipeline_migration.types import FilePath
+from pipeline_migration.registry import Container
+from pipeline_migration.types import FilePath, ManifestT
 from pipeline_migration.utils import YAMLStyle
 from tests.utils import generate_digest
 
@@ -107,9 +109,16 @@ def mock_get_digest_for_specific_tag(image_repo: str, version: str, expected_dig
     )
 
 
+def mock_get_bundle_image_manifest(bundle_ref: str, manifest: ManifestT) -> None:
+    c = Container(bundle_ref)
+    responses.get(f"https://{c.manifest_url()}", json=manifest)
+
+
 @responses.activate
-def test_use_bundle_ref(component_a_repo, monkeypatch):
+def test_use_bundle_ref(component_a_repo, monkeypatch, image_manifest):
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
+
     pipeline_file = component_a_repo.tekton_dir / "pr.yaml"
 
     cmd = ["pmt", "add-task", BUNDLE_REF, str(pipeline_file)]
@@ -117,7 +126,7 @@ def test_use_bundle_ref(component_a_repo, monkeypatch):
 
     entry_point()
 
-    VerifyUpdatedPipeline(f"task-{TASK_NAME}", BUNDLE_REF).check(str(pipeline_file))
+    VerifyUpdatedPipeline(f"{TASK_NAME}", BUNDLE_REF).check(str(pipeline_file))
 
 
 FILES_DIRS_COMBINATIONS = [
@@ -149,8 +158,11 @@ def files_dirs_combinations(request, component_a_repo, component_b_repo) -> list
 
 
 @responses.activate
-def test_work_with_files_or_dirs(files_dirs_combinations, component_b_repo, monkeypatch):
+def test_work_with_files_or_dirs(
+    files_dirs_combinations, component_b_repo, image_manifest, monkeypatch
+):
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
 
     check_targets = list(map(Path, files_dirs_combinations))
     cmd = ["pmt", "add-task", BUNDLE_REF]
@@ -166,7 +178,7 @@ def test_work_with_files_or_dirs(files_dirs_combinations, component_b_repo, monk
 
     entry_point()
 
-    verifier = VerifyUpdatedPipeline(f"task-{TASK_NAME}", BUNDLE_REF)
+    verifier = VerifyUpdatedPipeline(f"{TASK_NAME}", BUNDLE_REF)
     for item in check_targets:
         if item.is_dir():
             for yaml_file in item.glob("*.yaml"):
@@ -185,8 +197,11 @@ def test_work_with_files_or_dirs(files_dirs_combinations, component_b_repo, monk
         pytest.param(["error"], id="given-depended-task-is-unknown"),
     ],
 )
-def test_set_execution_order(request, depended_tasks, component_b_repo, caplog, monkeypatch):
+def test_set_execution_order(
+    request, depended_tasks, component_b_repo, image_manifest, caplog, monkeypatch
+):
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
 
     cmd = [
         "pmt",
@@ -206,7 +221,7 @@ def test_set_execution_order(request, depended_tasks, component_b_repo, caplog, 
     else:
         entry_point()
 
-        verifier = VerifyUpdatedPipeline(f"task-{TASK_NAME}", BUNDLE_REF, run_after=depended_tasks)
+        verifier = VerifyUpdatedPipeline(f"{TASK_NAME}", BUNDLE_REF, run_after=depended_tasks)
         for yaml_file in component_b_repo.tekton_dir.glob("*.yaml"):
             verifier.check(str(yaml_file))
 
@@ -232,8 +247,11 @@ def test_set_execution_order(request, depended_tasks, component_b_repo, caplog, 
         pytest.param(["verbose"], [], id="malformed-param-missing-comma"),
     ],
 )
-def test_set_params(request, params, expected_params, component_b_repo, capsys, monkeypatch):
+def test_set_params(
+    request, params, expected_params, component_b_repo, image_manifest, capsys, monkeypatch
+):
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
 
     cmd = [
         "pmt",
@@ -253,15 +271,16 @@ def test_set_params(request, params, expected_params, component_b_repo, capsys, 
     else:
         entry_point()
 
-        verifier = VerifyUpdatedPipeline(f"task-{TASK_NAME}", BUNDLE_REF, params=expected_params)
+        verifier = VerifyUpdatedPipeline(f"{TASK_NAME}", BUNDLE_REF, params=expected_params)
         for yaml_file in component_b_repo.tekton_dir.glob("*.yaml"):
             verifier.check(str(yaml_file))
 
 
 @responses.activate
 @pytest.mark.parametrize("skip_checks", [True, False])
-def test_set_skip_checks(skip_checks, component_b_repo, monkeypatch):
+def test_set_skip_checks(skip_checks, component_b_repo, image_manifest, monkeypatch):
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
 
     cmd = [
         "pmt",
@@ -275,14 +294,17 @@ def test_set_skip_checks(skip_checks, component_b_repo, monkeypatch):
     monkeypatch.setattr("sys.argv", cmd)
     entry_point()
 
-    verifier = VerifyUpdatedPipeline(f"task-{TASK_NAME}", BUNDLE_REF, skip_checks=skip_checks)
+    verifier = VerifyUpdatedPipeline(f"{TASK_NAME}", BUNDLE_REF, skip_checks=skip_checks)
     for yaml_file in component_b_repo.tekton_dir.glob("*.yaml"):
         verifier.check(str(yaml_file))
 
 
 @responses.activate
-def test_add_task_with_params_and_run_after_clone(component_a_repo, component_b_repo, monkeypatch):
+def test_add_task_with_params_and_run_after_clone(
+    component_a_repo, component_b_repo, image_manifest, monkeypatch
+):
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
 
     pipeline_files = list(
         itertools.chain(
@@ -323,7 +345,7 @@ def test_add_task_with_params_and_run_after_clone(component_a_repo, component_b_
 
     expected_params = [{"name": "image_url", "value": "$(build.results.image_url)"}]
     verifier = VerifyUpdatedPipeline(
-        f"task-{TASK_NAME}", BUNDLE_REF, params=expected_params, run_after=["clone"]
+        f"{TASK_NAME}", BUNDLE_REF, params=expected_params, run_after=["clone"]
     )
     for yaml_file in pipeline_files:
         verifier.check(str(yaml_file))
@@ -365,6 +387,7 @@ def test_skip_adding_task_if_exists(
     expected_log,
     component_a_repo,
     component_b_repo,
+    image_manifest,
     monkeypatch,
     caplog,
 ) -> None:
@@ -373,6 +396,11 @@ def test_skip_adding_task_if_exists(
     bundle_ref: Final = f"quay.io/{image_repo}:{version}@{bundle_digest}"
 
     mock_get_digest_for_specific_tag(image_repo, version, bundle_digest)
+
+    bundle_manifest = deepcopy(image_manifest)
+    annotations = bundle_manifest["layers"][0]["annotations"]
+    annotations["dev.tekton.image.name"] = actual_task_name
+    mock_get_bundle_image_manifest(bundle_ref, bundle_manifest)
 
     git_index: list[str] = []
 
@@ -428,6 +456,7 @@ def test_pipeline_and_actual_task_name_combinations(
     expected_pipeline_task_name,
     expected_actual_task_name,
     component_b_repo,
+    image_manifest,
     monkeypatch,
 ):
     test_digest = generate_digest()
@@ -435,6 +464,11 @@ def test_pipeline_and_actual_task_name_combinations(
     bundle_ref = f"quay.io/{image_repo}:0.1@{test_digest}"
 
     mock_get_digest_for_specific_tag(image_repo, "0.1", test_digest)
+
+    bundle_manifest = deepcopy(image_manifest)
+    annotations = bundle_manifest["layers"][0]["annotations"]
+    annotations["dev.tekton.image.name"] = actual_task_name
+    mock_get_bundle_image_manifest(bundle_ref, bundle_manifest)
 
     cmd = [
         "pmt",
@@ -457,9 +491,10 @@ def test_pipeline_and_actual_task_name_combinations(
 
 
 @responses.activate
-def test_preserve_yaml_formatting(component_a_repo, component_b_repo, monkeypatch):
+def test_preserve_yaml_formatting(component_a_repo, component_b_repo, image_manifest, monkeypatch):
     # component a and b repos have Pipeline and PipelineRun definitions individually
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
 
     cmd = [
         "pmt",
@@ -493,9 +528,10 @@ def test_preserve_yaml_formatting(component_a_repo, component_b_repo, monkeypatc
     ],
 )
 def test_add_task_to_finally(
-    cli_flag, check_finally, component_b_repo, component_a_repo, monkeypatch
+    cli_flag, check_finally, component_b_repo, component_a_repo, image_manifest, monkeypatch
 ):
     mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
 
     cmd = [
         "pmt",
@@ -513,6 +549,76 @@ def test_add_task_to_finally(
         component_a_repo.tekton_dir.glob("*.yaml"),
         component_b_repo.tekton_dir.glob("*.yaml"),
     )
-    verifier = VerifyUpdatedPipeline(f"task-{TASK_NAME}", BUNDLE_REF, check_finally=check_finally)
+    verifier = VerifyUpdatedPipeline(f"{TASK_NAME}", BUNDLE_REF, check_finally=check_finally)
     for yaml_file in pipeline_files:
         verifier.check(str(yaml_file))
+
+
+@responses.activate
+def test_use_actual_task_name(component_a_repo, image_manifest, monkeypatch):
+    """Verify bundle name is set to the actual task name rather than the image repository name"""
+    mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+    mock_get_bundle_image_manifest(BUNDLE_REF, image_manifest)
+
+    cmd = ["pmt", "add-task", BUNDLE_REF, str(component_a_repo.tekton_dir)]
+    monkeypatch.setattr("sys.argv", cmd)
+    entry_point()
+
+    pipeline_file = component_a_repo.tekton_dir.joinpath("pr.yaml")
+    VerifyUpdatedPipeline(TASK_NAME, BUNDLE_REF).check(str(pipeline_file))
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    "layers",
+    [
+        pytest.param(None, id="no-layers"),
+        pytest.param([], id="layers-is-empty"),
+        pytest.param(
+            [{"mediaType": "media type", "digest": "sha256:1234567", "size": 100}],
+            id="single-layer-without-annotations",
+        ),
+        pytest.param(
+            [
+                {
+                    "mediaType": "media type",
+                    "digest": "sha256:1234567",
+                    "size": 100,
+                    "annotations": {
+                        "dev.tekton.image.apiVersion": "v1",
+                        "dev.tekton.image.kind": "task",
+                        "dev.tekton.image.name": "push",
+                    },
+                },
+                {
+                    "mediaType": "media type",
+                    "digest": "sha256:3837283",
+                    "size": 100,
+                    "annotations": {
+                        "dev.tekton.image.apiVersion": "v1",
+                        "dev.tekton.image.kind": "task",
+                        "dev.tekton.image.name": "clone",
+                    },
+                },
+            ],
+            id="multiple-task-layers-annotations",
+        ),
+    ],
+)
+def test_stop_working_if_bundle_is_not_a_single_task_image(
+    layers, image_manifest, caplog, monkeypatch
+):
+    """Verify bundle name is set to the actual task name rather than the image repository name"""
+    mock_get_digest_for_specific_tag(*TEST_TASK_VALUES)
+
+    bundle_manifest = deepcopy(image_manifest)
+    if layers is None:
+        del bundle_manifest["layers"]
+    else:
+        bundle_manifest["layers"] = layers
+    mock_get_bundle_image_manifest(BUNDLE_REF, bundle_manifest)
+
+    monkeypatch.setattr("sys.argv", ["pmt", "add-task", BUNDLE_REF])
+    assert entry_point() == 1
+
+    assert "not point to a single-task bundle image" in caplog.text

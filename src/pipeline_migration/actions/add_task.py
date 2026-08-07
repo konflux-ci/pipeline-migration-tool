@@ -148,8 +148,8 @@ def register_cli(subparser) -> None:
         metavar="NAME",
         help="Specify an alternative name for the task configured in the pipeline. "
         "If omitted, name is derived from the bundle repository name."
-        "For example, from 'quay.io/konflux-ci/task-sast-coverity-check:0.1@sha256:...' "
-        "the name will be 'task-sast-coverity-check'.",
+        "For example, for 'quay.io/konflux-ci/task-sast-coverity-check:0.1@sha256:...', "
+        "the name will be actual task name 'sast-coverity-check'.",
     )
     add_task_parser.add_argument(
         "-a",

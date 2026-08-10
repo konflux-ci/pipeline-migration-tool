@@ -191,6 +191,30 @@ the same with `pmt modify`:
 Get more information about supported resources by `pmt modify -h`, and supported commands
 for the given resource by `pmt modify RESOURCE -h` (for example `pmt modify task -h`).
 
+#### Modifying tasks
+
+The `pmt modify task` command contains a number of subcommands for specific task modifications. Some
+of those modifications are described below.
+
+##### rename
+
+The `rename` subcommand will rename a given task. It will also update all `runAfter` references to the
+task with the new task name. The optional parameter `--task-ref-name` sets the bundle name as well.
+
+```bash
+  pmt modify task old-name rename new-name
+```
+
+##### set-bundle
+
+The `set-bundle` subcommand will set the value of the bundle for the given task. Unlike `pmt-migrate`, the
+new bundle value does not have to share a repo and image name with the current bundle. The optional parameter
+`--task-ref-name` sets the bundle name as well
+
+```bash
+  pmt modify task old-task set-bundle quay.io/sample-repo/sample-bundle@sha256:a12c9... --task-ref-name bundle-name
+``` 
+
 #### Unsupported resource?
 
 When resource you need is not supported by `pmt modify` you can use `generic` subcommand

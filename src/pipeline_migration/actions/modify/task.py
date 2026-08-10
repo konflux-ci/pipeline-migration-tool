@@ -10,8 +10,9 @@ from ruamel.yaml.comments import CommentedSeq
 
 from pipeline_migration.yamleditor import EditYAMLEntry, YAMLPath
 from pipeline_migration.types import FilePath
-from pipeline_migration.utils import YAMLStyle
+from pipeline_migration.utils import YAMLStyle, load_yaml
 from pipeline_migration.pipeline import PipelineFileOperation, iterate_files_or_dirs
+from pipeline_migration.actions.add_task import get_task_bundle_reference
 
 logger = logging.getLogger("modify.task")
 
@@ -38,11 +39,30 @@ The following are several examples with a Konflux task push-dockerfile:
 
     Note: if the param name exist current values will be replaced, not appended
 
+* Rename a task:
+
+    pmt modify task clair-scan rename roxctl-scan
+
+* Rename a task and update the taskRef resolver name param:
+
+    pmt modify task clair-scan rename roxctl-scan --task-ref-name task-roxctl-scan
+
+* Set the bundle for a task:
+
+    pmt modify task buildah set-bundle quay.io/org/task-buildah:0.2@sha256:abc123
+
+* Set the bundle and update the taskRef resolver name param:
+
+    pmt modify task buildah set-bundle quay.io/org/task-buildah:0.2@sha256:abc123 \\
+        --task-ref-name task-buildah
+
 * Supported task modifications:
    - add-param: adds a new param to the task (or updates existing)
    - remove-param: removes the specified param from the task
    - matrix-add-param: adds a new matrix param to the task (or updates existing)
    - matrix-remove-param: removes the specified matrix param from the task
+   - rename: renames the task in the pipeline
+   - set-bundle: sets the bundle in the taskRef resolver params
 """
 
 
@@ -58,6 +78,51 @@ class ParamType(Enum):
 
 class TaskNotFoundError(Exception):
     """Task of the given name not found"""
+
+
+class DuplicateTaskNameError(Exception):
+    """Raised when a rename would create a duplicate task name in the pipeline."""
+
+
+def _get_nested(doc: Any, path: list) -> Any:
+    """Traverse a nested mapping along path, raising KeyError if any key is missing."""
+    for p in path:
+        doc = doc[p]
+    return doc
+
+
+def _update_task_ref_name(
+    task_name: str,
+    task_ref_name: str,
+    ref_params: list,
+    task_path: YAMLPath,
+    pipeline_file: FilePath,
+    style: YAMLStyle,
+) -> None:
+    """Update the 'name' param value inside taskRef.params to task_ref_name.
+
+    Logs a warning and does nothing if the 'name' param is not present in ref_params.
+    """
+    for param_index, param in enumerate(ref_params):
+        if param.get("name") == "name":
+            yamledit = EditYAMLEntry(pipeline_file, style=style)
+            yamledit.replace(
+                task_path + ["taskRef", "params", param_index, "value"],
+                task_ref_name,
+            )
+            logger.info(
+                "task '%s' in '%s': taskRef name updated to '%s'",
+                task_name,
+                pipeline_file,
+                task_ref_name,
+            )
+            break
+    else:
+        logger.warning(
+            "task '%s' in '%s': taskRef has no 'name' param, " "skipping task-ref-name update",
+            task_name,
+            pipeline_file,
+        )
 
 
 class TaskBase(PipelineFileOperation):
@@ -97,17 +162,10 @@ class TaskBase(PipelineFileOperation):
     ):
         not_found_task = [False] * len(yaml_paths)
 
-        def get_path_doc(ypath):
-            """:raises KeyError: when path doesn't exist"""
-            tmp_doc = copy.copy(loaded_doc)
-            for p in ypath:
-                tmp_doc = tmp_doc[p]
-            return tmp_doc
-
         for index, yaml_path in enumerate(yaml_paths):
             # check if path exist
             try:
-                tmp_doc = get_path_doc(yaml_path)
+                tmp_doc = _get_nested(copy.copy(loaded_doc), yaml_path)
             except KeyError:
                 not_found_task[index] = True
                 continue
@@ -202,6 +260,45 @@ def register_cli(subparser) -> None:
     subparser_remove_param.add_argument("param_name", help="parameter name", metavar="PARAM-NAME")
 
     subparser_remove_param.set_defaults(action=action_matrix_remove_param)
+
+    # rename
+    subparser_rename = subparser_mod.add_parser(
+        "rename",
+        help="Rename the task in the pipeline.",
+    )
+    subparser_rename.add_argument("new_name", help="new task name", metavar="NEW-NAME")
+    subparser_rename.add_argument(
+        "-r",
+        "--task-ref-name",
+        metavar="REF-NAME",
+        dest="task_ref_name",
+        default=None,
+        help="New value for the 'name' entry in taskRef.params (the actual task name inside "
+        "the bundle resolver). If omitted, taskRef.params is left unchanged.",
+    )
+    subparser_rename.set_defaults(action=action_rename)
+
+    # set-bundle
+    subparser_set_bundle = subparser_mod.add_parser(
+        "set-bundle",
+        help="Set the bundle in the taskRef resolver params.",
+    )
+    subparser_set_bundle.add_argument(
+        "bundle_ref",
+        type=get_task_bundle_reference,
+        help="new bundle reference (e.g. quay.io/org/task-foo:0.1@sha256:...)",
+        metavar="BUNDLE-REF",
+    )
+    subparser_set_bundle.add_argument(
+        "-r",
+        "--task-ref-name",
+        metavar="REF-NAME",
+        dest="task_ref_name",
+        default=None,
+        help="New value for the 'name' entry in taskRef.params. If omitted, the name param "
+        "is left unchanged.",
+    )
+    subparser_set_bundle.set_defaults(action=action_set_bundle)
 
 
 class ModTaskAddParamOperation(TaskBase):
@@ -626,5 +723,222 @@ def action_matrix_remove_param(args) -> None:
         search_places = [str(relative_tekton_dir.absolute())]
 
     op = ModTaskMatrixRemoveParamOperation(args.task_name, args.param_name)
+    for file_path in iterate_files_or_dirs(search_places):
+        op.handle(str(file_path))
+
+
+class ModTaskRenameOperation(TaskBase):
+    """Operation that renames a pipeline task and optionally updates its taskRef resolver name."""
+
+    def __init__(
+        self,
+        task_name: str,
+        new_name: str,
+        task_ref_name: str | None = None,
+    ) -> None:
+        super().__init__(task_name)
+        self.new_name = new_name
+        self.task_ref_name = task_ref_name
+
+    def _do_action(
+        self, tasks: CommentedSeq, path_prefix: YAMLPath, pipeline_file: FilePath, style: YAMLStyle
+    ) -> bool:
+        for index, task in enumerate(tasks):
+            if task.get("name", "") != self.task_name:
+                continue
+
+            task_path = list(path_prefix) + [index]
+
+            yamledit = EditYAMLEntry(pipeline_file, style=style)
+            yamledit.replace(task_path + ["name"], self.new_name)
+            logger.info(
+                "task '%s' in '%s': renamed to '%s'",
+                self.task_name,
+                pipeline_file,
+                self.new_name,
+            )
+
+            if self.task_ref_name is not None:
+                task_ref = task.get("taskRef", {})
+                _update_task_ref_name(
+                    self.new_name,
+                    self.task_ref_name,
+                    task_ref.get("params", []),
+                    task_path,
+                    pipeline_file,
+                    style,
+                )
+
+            return True
+
+        raise TaskNotFoundError
+
+    def _check_new_name_is_available(
+        self, loaded_doc: Any, task_paths: List[List[str]], file_path: FilePath
+    ) -> None:
+        """Raise DuplicateTaskNameError if new_name is already used by a different task."""
+        for path in task_paths:
+            try:
+                tmp = _get_nested(loaded_doc, path)
+            except KeyError:
+                continue
+            for task in tmp:
+                name = task.get("name", "")
+                if name == self.new_name and name != self.task_name:
+                    raise DuplicateTaskNameError(
+                        f"cannot rename task '{self.task_name}' to '{self.new_name}' "
+                        f"in '{file_path}': a task named '{self.new_name}' already exists"
+                    )
+
+    def _update_run_after_refs(
+        self, file_path: FilePath, style: YAMLStyle, task_paths: List[List[str]]
+    ) -> None:
+        """Replace occurrences of the old task name with the new name in all runAfter lists."""
+        for path_prefix in task_paths:
+            doc = load_yaml(file_path, style)
+            try:
+                tasks = _get_nested(doc, path_prefix)
+            except KeyError:
+                continue
+
+            for task_index, task in enumerate(tasks):
+                run_after = task.get("runAfter", [])
+                if self.task_name not in run_after:
+                    continue
+
+                new_run_after = [
+                    self.new_name if name == self.task_name else name for name in run_after
+                ]
+                yamledit = EditYAMLEntry(file_path, style=style)
+                yamledit.replace(list(path_prefix) + [task_index, "runAfter"], new_run_after)
+                logger.info(
+                    "task '%s' in '%s': runAfter updated '%s' -> '%s'",
+                    task.get("name"),
+                    file_path,
+                    self.task_name,
+                    self.new_name,
+                )
+
+    def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
+        task_paths: List[List[str]] = [["spec", "tasks"], ["spec", "finally"]]
+        self._check_new_name_is_available(loaded_doc, task_paths, file_path)
+        super().handle_pipeline_file(file_path, loaded_doc, style)
+        self._update_run_after_refs(file_path, style, task_paths)
+
+    def handle_pipeline_run_file(
+        self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
+    ) -> None:
+        task_paths: List[List[str]] = [
+            ["spec", "pipelineSpec", "tasks"],
+            ["spec", "pipelineSpec", "finally"],
+        ]
+        self._check_new_name_is_available(loaded_doc, task_paths, file_path)
+        super().handle_pipeline_run_file(file_path, loaded_doc, style)
+        self._update_run_after_refs(file_path, style, task_paths)
+
+
+def action_rename(args) -> None:
+    """CLI action handler to rename a task in pipeline files."""
+    search_places = [path for path in args.file_or_dir if path]
+    relative_tekton_dir = Path("./.tekton")
+    if not search_places and relative_tekton_dir.exists():
+        search_places = [str(relative_tekton_dir.absolute())]
+
+    op = ModTaskRenameOperation(args.task_name, args.new_name, args.task_ref_name)
+    for file_path in iterate_files_or_dirs(search_places):
+        try:
+            op.handle(str(file_path))
+        except DuplicateTaskNameError as e:
+            raise SystemExit(f"error: {e}") from e
+
+
+class ModTaskSetBundleOperation(TaskBase):
+    """Operation that sets the bundle param in taskRef.params and optionally updates the name."""
+
+    def __init__(
+        self,
+        task_name: str,
+        bundle_ref: str,
+        task_ref_name: str | None = None,
+    ) -> None:
+        super().__init__(task_name)
+        self.bundle_ref = bundle_ref
+        self.task_ref_name = task_ref_name
+
+    def _do_action(
+        self, tasks: CommentedSeq, path_prefix: YAMLPath, pipeline_file: FilePath, style: YAMLStyle
+    ) -> bool:
+        for index, task in enumerate(tasks):
+            if task.get("name", "") != self.task_name:
+                continue
+
+            task_path = list(path_prefix) + [index]
+            task_ref = task.get("taskRef", {})
+            ref_params = task_ref.get("params", [])
+
+            if not ref_params:
+                logger.warning(
+                    "task '%s' in '%s': taskRef has no params, skipping set-bundle",
+                    self.task_name,
+                    pipeline_file,
+                )
+                return False
+
+            bundle_index = None
+            for param_index, param in enumerate(ref_params):
+                if param.get("name") == "bundle":
+                    bundle_index = param_index
+                    break
+
+            if bundle_index is None:
+                logger.warning(
+                    "task '%s' in '%s': taskRef has no 'bundle' param, skipping set-bundle",
+                    self.task_name,
+                    pipeline_file,
+                )
+                return False
+
+            if ref_params[bundle_index].get("value") != self.bundle_ref:
+                yamledit = EditYAMLEntry(pipeline_file, style=style)
+                yamledit.replace(
+                    task_path + ["taskRef", "params", bundle_index, "value"],
+                    self.bundle_ref,
+                )
+                logger.info(
+                    "task '%s' in '%s': bundle updated to '%s'",
+                    self.task_name,
+                    pipeline_file,
+                    self.bundle_ref,
+                )
+            else:
+                logger.info(
+                    "task '%s' in '%s': bundle already set to required value",
+                    self.task_name,
+                    pipeline_file,
+                )
+
+            if self.task_ref_name is not None:
+                _update_task_ref_name(
+                    self.task_name,
+                    self.task_ref_name,
+                    ref_params,
+                    task_path,
+                    pipeline_file,
+                    style,
+                )
+
+            return True
+
+        raise TaskNotFoundError
+
+
+def action_set_bundle(args) -> None:
+    """CLI action handler to set the bundle in taskRef.params for a task in pipeline files."""
+    search_places = [path for path in args.file_or_dir if path]
+    relative_tekton_dir = Path("./.tekton")
+    if not search_places and relative_tekton_dir.exists():
+        search_places = [str(relative_tekton_dir.absolute())]
+
+    op = ModTaskSetBundleOperation(args.task_name, args.bundle_ref, args.task_ref_name)
     for file_path in iterate_files_or_dirs(search_places):
         op.handle(str(file_path))

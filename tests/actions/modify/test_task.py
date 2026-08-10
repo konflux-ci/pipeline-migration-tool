@@ -6,7 +6,10 @@ from pipeline_migration.actions.modify.task import (
     ModTaskRemoveParamOperation,
     ModTaskMatrixAddParamOperation,
     ModTaskMatrixRemoveParamOperation,
+    ModTaskRenameOperation,
+    ModTaskSetBundleOperation,
     TaskNotFoundError,
+    DuplicateTaskNameError,
 )
 from pipeline_migration.utils import load_yaml, YAMLStyle
 
@@ -1724,6 +1727,600 @@ class TestModTaskMatrixRemoveParamOperation:
             """)
 
         assert read_file_content(pipeline_run_matrix_include_only_yaml_file) == expected
+
+
+@pytest.fixture
+def pipeline_bundles_yaml_file(create_yaml_file):
+    """Pipeline YAML with a bundles-resolver taskRef, used for rename tests."""
+    content = dedent("""\
+        apiVersion: tekton.dev/v1
+        kind: Pipeline
+        metadata:
+          name: test-pipeline
+        spec:
+          tasks:
+            - name: clair-scan
+              taskRef:
+                resolver: bundles
+                params:
+                  - name: name
+                    value: task-clair-scan
+                  - name: bundle
+                    value: quay.io/org/task-clair-scan:0.1@sha256:abc123
+                  - name: kind
+                    value: task
+              params:
+                - name: image-url
+                  value: $(tasks.build.results.IMAGE_URL)
+            - name: build
+              taskRef:
+                name: buildah
+        """)
+    return create_yaml_file(content)
+
+
+@pytest.fixture
+def pipeline_run_bundles_yaml_file(create_yaml_file):
+    """PipelineRun YAML with a bundles-resolver taskRef, used for rename tests."""
+    content = dedent("""\
+        apiVersion: tekton.dev/v1
+        kind: PipelineRun
+        metadata:
+          name: test-pipeline-run
+        spec:
+          pipelineSpec:
+            tasks:
+              - name: clair-scan
+                taskRef:
+                  resolver: bundles
+                  params:
+                    - name: name
+                      value: task-clair-scan
+                    - name: bundle
+                      value: quay.io/org/task-clair-scan:0.1@sha256:abc123
+                    - name: kind
+                      value: task
+                params:
+                  - name: image-url
+                    value: $(tasks.build.results.IMAGE_URL)
+              - name: build
+                taskRef:
+                  name: buildah
+        """)
+    return create_yaml_file(content)
+
+
+class TestModTaskRenameOperation:
+    """Test cases for ModTaskRenameOperation."""
+
+    def test_initialization(self):
+        op = ModTaskRenameOperation("clair-scan", "roxctl-scan")
+        assert op.task_name == "clair-scan"
+        assert op.new_name == "roxctl-scan"
+        assert op.task_ref_name is None
+
+    def test_initialization_with_task_ref_name(self):
+        op = ModTaskRenameOperation("clair-scan", "roxctl-scan", "task-roxctl-scan")
+        assert op.task_ref_name == "task-roxctl-scan"
+
+    def test_rename_task_name(self, pipeline_yaml_file):
+        op = ModTaskRenameOperation("clone", "new-clone")
+
+        loaded_doc = load_yaml(pipeline_yaml_file)
+        style = YAMLStyle.detect(pipeline_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
+        assert result is True
+
+        doc = load_yaml(pipeline_yaml_file)
+        task_names = [t["name"] for t in doc["spec"]["tasks"]]
+        assert "new-clone" in task_names
+        assert "clone" not in task_names
+
+    def test_rename_does_not_affect_other_tasks(self, pipeline_yaml_file):
+        op = ModTaskRenameOperation("clone", "new-clone")
+
+        loaded_doc = load_yaml(pipeline_yaml_file)
+        style = YAMLStyle.detect(pipeline_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
+
+        doc = load_yaml(pipeline_yaml_file)
+        task_names = [t["name"] for t in doc["spec"]["tasks"]]
+        assert "build" in task_names
+        assert "test-task" in task_names
+
+    def test_rename_with_task_ref_name(self, pipeline_bundles_yaml_file):
+        op = ModTaskRenameOperation("clair-scan", "roxctl-scan", "task-roxctl-scan")
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_bundles_yaml_file, style)
+        assert result is True
+
+        doc = load_yaml(pipeline_bundles_yaml_file)
+        task_names = [t["name"] for t in doc["spec"]["tasks"]]
+        assert "roxctl-scan" in task_names
+        assert "clair-scan" not in task_names
+
+        new_task = next(t for t in doc["spec"]["tasks"] if t["name"] == "roxctl-scan")
+        taskref_params = new_task["taskRef"]["params"]
+        name_param = next(p for p in taskref_params if p["name"] == "name")
+        assert name_param["value"] == "task-roxctl-scan"
+
+    def test_task_ref_name_skipped_when_no_taskref_params(self, pipeline_yaml_file):
+        """When taskRef has no params (non-bundles style), --task-ref-name is a no-error no-op."""
+        op = ModTaskRenameOperation("clone", "new-clone", "task-new-clone")
+
+        loaded_doc = load_yaml(pipeline_yaml_file)
+        style = YAMLStyle.detect(pipeline_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
+        assert result is True
+
+        doc = load_yaml(pipeline_yaml_file)
+        task_names = [t["name"] for t in doc["spec"]["tasks"]]
+        assert "new-clone" in task_names
+
+    def test_task_not_found(self, pipeline_yaml_file):
+        op = ModTaskRenameOperation("nonexistent", "something-else")
+
+        loaded_doc = load_yaml(pipeline_yaml_file)
+        style = YAMLStyle.detect(pipeline_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        with pytest.raises(TaskNotFoundError):
+            op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
+
+        doc = load_yaml(pipeline_yaml_file)
+        task_names = [t["name"] for t in doc["spec"]["tasks"]]
+        assert task_names == ["clone", "build", "test-task"]
+
+    def test_handle_pipeline_file(self, pipeline_bundles_yaml_file):
+        op = ModTaskRenameOperation("clair-scan", "roxctl-scan", "task-roxctl-scan")
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+
+        op.handle_pipeline_file(pipeline_bundles_yaml_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_bundles_yaml_file)
+        tasks = doc["spec"]["tasks"]
+        assert tasks[0]["name"] == "roxctl-scan"
+        name_param = next(p for p in tasks[0]["taskRef"]["params"] if p["name"] == "name")
+        assert name_param["value"] == "task-roxctl-scan"
+
+    def test_handle_pipeline_run_file(self, pipeline_run_bundles_yaml_file):
+        op = ModTaskRenameOperation("clair-scan", "roxctl-scan", "task-roxctl-scan")
+
+        loaded_doc = load_yaml(pipeline_run_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_run_bundles_yaml_file)
+
+        op.handle_pipeline_run_file(pipeline_run_bundles_yaml_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_run_bundles_yaml_file)
+        tasks = doc["spec"]["pipelineSpec"]["tasks"]
+        assert tasks[0]["name"] == "roxctl-scan"
+        name_param = next(p for p in tasks[0]["taskRef"]["params"] if p["name"] == "name")
+        assert name_param["value"] == "task-roxctl-scan"
+
+    def test_handle_pipeline_file_finally(self, create_yaml_file):
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              finally:
+                - name: clair-scan
+                  taskRef:
+                    resolver: bundles
+                    params:
+                      - name: name
+                        value: task-clair-scan
+                      - name: bundle
+                        value: quay.io/org/task-clair-scan:0.1@sha256:abc123
+                      - name: kind
+                        value: task
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskRenameOperation("clair-scan", "roxctl-scan", "task-roxctl-scan")
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+
+        op.handle_pipeline_file(pipeline_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_file)
+        tasks = doc["spec"]["finally"]
+        assert tasks[0]["name"] == "roxctl-scan"
+        name_param = next(p for p in tasks[0]["taskRef"]["params"] if p["name"] == "name")
+        assert name_param["value"] == "task-roxctl-scan"
+
+    def test_duplicate_name_raises_error(self, create_yaml_file):
+        """Renaming to a name already used by another task must raise DuplicateTaskNameError."""
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+                - name: clone
+                  taskRef:
+                    name: git-clone
+                - name: build
+                  taskRef:
+                    name: buildah
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskRenameOperation("clone", "build")
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+
+        with pytest.raises(DuplicateTaskNameError, match="'build' already exists"):
+            op.handle_pipeline_file(pipeline_file, loaded_doc, style)
+
+        # File must be unchanged
+        doc = load_yaml(pipeline_file)
+        task_names = [t["name"] for t in doc["spec"]["tasks"]]
+        assert task_names == ["clone", "build"]
+
+    def test_duplicate_name_across_tasks_and_finally(self, create_yaml_file):
+        """Renaming a tasks-section task to a name used in finally must fail."""
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+                - name: clone
+                  taskRef:
+                    name: git-clone
+              finally:
+                - name: notify
+                  taskRef:
+                    name: slack-notify
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskRenameOperation("clone", "notify")
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+
+        with pytest.raises(DuplicateTaskNameError):
+            op.handle_pipeline_file(pipeline_file, loaded_doc, style)
+
+    def test_run_after_updated_on_rename(self, create_yaml_file):
+        """runAfter references to the renamed task are updated in other tasks."""
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+                - name: clone
+                  taskRef:
+                    name: git-clone
+                - name: build
+                  taskRef:
+                    name: buildah
+                  runAfter:
+                    - clone
+                - name: test-task
+                  taskRef:
+                    name: test-runner
+                  runAfter:
+                    - clone
+                    - build
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskRenameOperation("clone", "git-clone-task")
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+        op.handle_pipeline_file(pipeline_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_file)
+        tasks = {t["name"]: t for t in doc["spec"]["tasks"]}
+        assert "git-clone-task" in tasks
+        assert "clone" not in tasks
+        assert tasks["build"]["runAfter"] == ["git-clone-task"]
+        assert tasks["test-task"]["runAfter"] == ["git-clone-task", "build"]
+
+    def test_run_after_updated_in_finally_tasks(self, create_yaml_file):
+        """runAfter in finally tasks referencing the renamed task are also updated."""
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+                - name: clone
+                  taskRef:
+                    name: git-clone
+                - name: build
+                  taskRef:
+                    name: buildah
+                  runAfter:
+                    - clone
+              finally:
+                - name: notify
+                  taskRef:
+                    name: slack-notify
+                  runAfter:
+                    - clone
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskRenameOperation("clone", "git-clone-task")
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+        op.handle_pipeline_file(pipeline_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_file)
+        tasks = {t["name"]: t for t in doc["spec"]["tasks"]}
+        finally_tasks = {t["name"]: t for t in doc["spec"]["finally"]}
+        assert "git-clone-task" in tasks
+        assert tasks["build"]["runAfter"] == ["git-clone-task"]
+        assert finally_tasks["notify"]["runAfter"] == ["git-clone-task"]
+
+    def test_run_after_updated_in_pipeline_run(self, create_yaml_file):
+        """runAfter references are updated in PipelineRun files too."""
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: PipelineRun
+            metadata:
+              name: test-pipeline-run
+            spec:
+              pipelineSpec:
+                tasks:
+                  - name: clone
+                    taskRef:
+                      name: git-clone
+                  - name: build
+                    taskRef:
+                      name: buildah
+                    runAfter:
+                      - clone
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskRenameOperation("clone", "git-clone-task")
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+        op.handle_pipeline_run_file(pipeline_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_file)
+        tasks = {t["name"]: t for t in doc["spec"]["pipelineSpec"]["tasks"]}
+        assert "git-clone-task" in tasks
+        assert tasks["build"]["runAfter"] == ["git-clone-task"]
+
+    def test_no_run_after_refs_is_noop(self, pipeline_bundles_yaml_file):
+        """When no tasks reference the renamed task in runAfter, the rename still works."""
+        op = ModTaskRenameOperation("clair-scan", "roxctl-scan")
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+        op.handle_pipeline_file(pipeline_bundles_yaml_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_bundles_yaml_file)
+        task_names = [t["name"] for t in doc["spec"]["tasks"]]
+        assert "roxctl-scan" in task_names
+        assert "clair-scan" not in task_names
+
+
+class TestModTaskSetBundleOperation:
+    """Test cases for ModTaskSetBundleOperation."""
+
+    NEW_BUNDLE = "quay.io/org/task-clair-scan:0.2@sha256:def456"
+
+    def test_initialization(self):
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE)
+        assert op.task_name == "clair-scan"
+        assert op.bundle_ref == self.NEW_BUNDLE
+        assert op.task_ref_name is None
+
+    def test_initialization_with_task_ref_name(self):
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE, "task-clair-scan-v2")
+        assert op.task_ref_name == "task-clair-scan-v2"
+
+    def test_set_bundle(self, pipeline_bundles_yaml_file):
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE)
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_bundles_yaml_file, style)
+        assert result is True
+
+        doc = load_yaml(pipeline_bundles_yaml_file)
+        task = next(t for t in doc["spec"]["tasks"] if t["name"] == "clair-scan")
+        bundle_param = next(p for p in task["taskRef"]["params"] if p["name"] == "bundle")
+        assert bundle_param["value"] == self.NEW_BUNDLE
+
+    def test_set_bundle_already_set(self, pipeline_bundles_yaml_file):
+        """Returns True without modifying the file when bundle is already the target value."""
+        current_bundle = "quay.io/org/task-clair-scan:0.1@sha256:abc123"
+        op = ModTaskSetBundleOperation("clair-scan", current_bundle)
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        original_content = read_file_content(pipeline_bundles_yaml_file)
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_bundles_yaml_file, style)
+        assert result is True
+        assert read_file_content(pipeline_bundles_yaml_file) == original_content
+
+    def test_set_bundle_with_task_ref_name(self, pipeline_bundles_yaml_file):
+        """Updates both the bundle and the taskRef name param when task_ref_name is given."""
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE, "task-clair-scan-v2")
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_bundles_yaml_file, style)
+        assert result is True
+
+        doc = load_yaml(pipeline_bundles_yaml_file)
+        task = next(t for t in doc["spec"]["tasks"] if t["name"] == "clair-scan")
+        ref_params = task["taskRef"]["params"]
+        bundle_param = next(p for p in ref_params if p["name"] == "bundle")
+        name_param = next(p for p in ref_params if p["name"] == "name")
+        assert bundle_param["value"] == self.NEW_BUNDLE
+        assert name_param["value"] == "task-clair-scan-v2"
+
+    def test_task_without_taskref_params_returns_false(self, pipeline_yaml_file):
+        """Returns False when the task's taskRef has no params (non-bundles resolver style)."""
+        op = ModTaskSetBundleOperation("clone", self.NEW_BUNDLE)
+
+        loaded_doc = load_yaml(pipeline_yaml_file)
+        style = YAMLStyle.detect(pipeline_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_yaml_file, style)
+        assert result is False
+
+    def test_task_without_bundle_param_returns_false(self, create_yaml_file):
+        """Returns False when taskRef has params but none named 'bundle'."""
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+                - name: clair-scan
+                  taskRef:
+                    resolver: bundles
+                    params:
+                      - name: name
+                        value: task-clair-scan
+                      - name: kind
+                        value: task
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE)
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_file, style)
+        assert result is False
+
+    def test_task_ref_name_skipped_when_no_name_param(self, create_yaml_file):
+        """Warns and skips the name update when taskRef has no 'name' param."""
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+                - name: clair-scan
+                  taskRef:
+                    resolver: bundles
+                    params:
+                      - name: bundle
+                        value: quay.io/org/task-clair-scan:0.1@sha256:abc123
+                      - name: kind
+                        value: task
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE, "task-clair-scan-v2")
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        result = op._do_action(tasks, ["spec", "tasks"], pipeline_file, style)
+        assert result is True
+
+        doc = load_yaml(pipeline_file)
+        task = next(t for t in doc["spec"]["tasks"] if t["name"] == "clair-scan")
+        bundle_param = next(p for p in task["taskRef"]["params"] if p["name"] == "bundle")
+        assert bundle_param["value"] == self.NEW_BUNDLE
+
+    def test_task_not_found_raises(self, pipeline_bundles_yaml_file):
+        op = ModTaskSetBundleOperation("nonexistent", self.NEW_BUNDLE)
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+        tasks = loaded_doc["spec"]["tasks"]
+
+        with pytest.raises(TaskNotFoundError):
+            op._do_action(tasks, ["spec", "tasks"], pipeline_bundles_yaml_file, style)
+
+    def test_handle_pipeline_file(self, pipeline_bundles_yaml_file):
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE)
+
+        loaded_doc = load_yaml(pipeline_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_bundles_yaml_file)
+
+        op.handle_pipeline_file(pipeline_bundles_yaml_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_bundles_yaml_file)
+        task = next(t for t in doc["spec"]["tasks"] if t["name"] == "clair-scan")
+        bundle_param = next(p for p in task["taskRef"]["params"] if p["name"] == "bundle")
+        assert bundle_param["value"] == self.NEW_BUNDLE
+
+    def test_handle_pipeline_run_file(self, pipeline_run_bundles_yaml_file):
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE)
+
+        loaded_doc = load_yaml(pipeline_run_bundles_yaml_file)
+        style = YAMLStyle.detect(pipeline_run_bundles_yaml_file)
+
+        op.handle_pipeline_run_file(pipeline_run_bundles_yaml_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_run_bundles_yaml_file)
+        task = next(t for t in doc["spec"]["pipelineSpec"]["tasks"] if t["name"] == "clair-scan")
+        bundle_param = next(p for p in task["taskRef"]["params"] if p["name"] == "bundle")
+        assert bundle_param["value"] == self.NEW_BUNDLE
+
+    def test_handle_pipeline_file_finally(self, create_yaml_file):
+        content = dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              finally:
+                - name: clair-scan
+                  taskRef:
+                    resolver: bundles
+                    params:
+                      - name: name
+                        value: task-clair-scan
+                      - name: bundle
+                        value: quay.io/org/task-clair-scan:0.1@sha256:abc123
+                      - name: kind
+                        value: task
+            """)
+        pipeline_file = create_yaml_file(content)
+        op = ModTaskSetBundleOperation("clair-scan", self.NEW_BUNDLE)
+
+        loaded_doc = load_yaml(pipeline_file)
+        style = YAMLStyle.detect(pipeline_file)
+
+        op.handle_pipeline_file(pipeline_file, loaded_doc, style)
+
+        doc = load_yaml(pipeline_file)
+        task = next(t for t in doc["spec"]["finally"] if t["name"] == "clair-scan")
+        bundle_param = next(p for p in task["taskRef"]["params"] if p["name"] == "bundle")
+        assert bundle_param["value"] == self.NEW_BUNDLE
 
 
 class TestComplexScenarios:

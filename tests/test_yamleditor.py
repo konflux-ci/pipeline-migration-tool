@@ -243,6 +243,24 @@ class TestInsertTextAtLine:
 
         assert read_file_content(temp_file_with_content) == expected
 
+    def test_insert_at_end_of_file_without_trailing_newline(self, create_yaml_file):
+        """Test appending to a file whose last line has no trailing newline."""
+        file_path = create_yaml_file("Line 1\nLine 2\nLine 3")
+
+        insert_text_at_line(file_path, -1, "Appended Line")
+
+        expected = "Line 1\nLine 2\nLine 3\nAppended Line\n"
+        assert read_file_content(file_path) == expected
+
+    def test_insert_beyond_file_length_without_trailing_newline(self, create_yaml_file):
+        """Test appending beyond file length when last line has no trailing newline."""
+        file_path = create_yaml_file("Line 1\nLine 2\nLine 3")
+
+        insert_text_at_line(file_path, 10, "Appended Line")
+
+        expected = "Line 1\nLine 2\nLine 3\nAppended Line\n"
+        assert read_file_content(file_path) == expected
+
     def test_replace_single_line(self, temp_file_with_content):
         """Test replacing a single line."""
         insert_text_at_line(temp_file_with_content, 2, "Replaced Line 3", replace_lines=1)

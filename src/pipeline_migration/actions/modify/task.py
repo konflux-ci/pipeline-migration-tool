@@ -1,7 +1,6 @@
 from abc import abstractmethod
 import argparse
 import copy
-from enum import Enum
 import logging
 from typing import Any, Final
 
@@ -13,6 +12,10 @@ from pipeline_migration.utils import YAMLStyle, load_yaml
 from pipeline_migration.pipeline import PipelineFileOperation
 from pipeline_migration.actions.add_task import get_task_bundle_reference
 from pipeline_migration.actions.modify.common import run_modify
+from pipeline_migration.actions.modify.common import (
+    ParamType,
+    get_nested,
+)
 
 logger = logging.getLogger("modify.task")
 
@@ -66,29 +69,12 @@ The following are several examples with a Konflux task push-dockerfile:
 """
 
 
-class ParamType(Enum):
-    """Enum for task parameter types: string or array."""
-
-    string = "string"
-    array = "array"
-
-    def __str__(self) -> str:
-        return self.value
-
-
 class TaskNotFoundError(Exception):
     """Task of the given name not found"""
 
 
 class DuplicateTaskNameError(Exception):
     """Raised when a rename would create a duplicate task name in the pipeline."""
-
-
-def _get_nested(doc: Any, path: list) -> Any:
-    """Traverse a nested mapping along path, raising KeyError if any key is missing."""
-    for p in path:
-        doc = doc[p]
-    return doc
 
 
 def _update_task_ref_name(
@@ -165,7 +151,7 @@ class TaskBase(PipelineFileOperation):
         for index, yaml_path in enumerate(yaml_paths):
             # check if path exist
             try:
-                tmp_doc = _get_nested(copy.copy(loaded_doc), yaml_path)
+                tmp_doc = get_nested(copy.copy(loaded_doc), yaml_path)
             except KeyError:
                 not_found_task[index] = True
                 continue
@@ -755,7 +741,7 @@ class ModTaskRenameOperation(TaskBase):
         """Raise DuplicateTaskNameError if new_name is already used by a different task."""
         for path in task_paths:
             try:
-                tmp = _get_nested(loaded_doc, path)
+                tmp = get_nested(loaded_doc, path)
             except KeyError:
                 continue
             for task in tmp:
@@ -773,7 +759,7 @@ class ModTaskRenameOperation(TaskBase):
         for path_prefix in task_paths:
             doc = load_yaml(file_path, style)
             try:
-                tasks = _get_nested(doc, path_prefix)
+                tasks = get_nested(doc, path_prefix)
             except KeyError:
                 continue
 

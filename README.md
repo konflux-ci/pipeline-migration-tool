@@ -224,6 +224,71 @@ new bundle value does not have to share a repo and image name with the current b
   pmt modify task old-task set-bundle quay.io/sample-repo/sample-bundle@sha256:a12c9... --task-ref-name bundle-name
 ``` 
 
+#### Modifying pipelines
+
+The `pmt modify pipeline` command supports adding and removing pipeline-level parameters and results.
+
+##### add-param
+
+Add a parameter to the pipeline. If the parameter already exists, this is a no-op.
+The `--default` option is required (see [Limitations](#limitations)).
+
+```bash
+pmt modify pipeline add-param --default "" --description "Git repository URL" git-url
+```
+
+Options:
+- `--type`: Parameter type (`string` or `array`). Defaults to `string`.
+- `--description`: Parameter description. Defaults to an empty string. Multiline descriptions are
+  added as YAML literal strings.
+- `--default` (**required**): Default value. For array type, specify elements as a JSON array
+  (e.g. `'["val1","val2"]'`). An empty string `""` is interpreted as an empty array.
+
+##### remove-param
+
+Remove a parameter from the pipeline.
+
+```bash
+pmt modify pipeline remove-param git-url
+```
+
+##### add-result
+
+Add a result to the pipeline. If the result already exists, this is a no-op.
+
+```bash
+pmt modify pipeline add-result \
+    --description "Image digest" \
+    'IMAGE_DIGEST=$(tasks.build.results.IMAGE_DIGEST)'
+```
+
+For array results, the value can be a JSON array:
+
+```bash
+pmt modify pipeline add-result --type array \
+    'IMAGES=["$(tasks.foo.results.bar)","$(tasks.spam.results.egg)"]'
+```
+
+For object results, the value can be a JSON object:
+
+```bash
+pmt modify pipeline add-result --type object \
+    'BUILD_OUTPUT={"image_url":"$(tasks.build.results.IMAGE_URL)"}'
+```
+
+Options:
+- `--type`: Result type (`string`, `array`, or `object`). Defaults to `string`.
+- `--description`: Result description. Defaults to an empty string. Multiline descriptions are
+  added as YAML literal strings.
+
+##### remove-result
+
+Remove a result from the pipeline.
+
+```bash
+pmt modify pipeline remove-result IMAGE_DIGEST
+```
+
 #### Unsupported resource?
 
 When resource you need is not supported by `pmt modify` you can use `generic` subcommand
@@ -254,6 +319,15 @@ Example using yq:
       "$(yq '.spec.pipelineSpec.tasks[] | select(.name == "prefetch-dependencies") | \\
          path' .tekton/pr.yaml)"
 ```
+
+#### Limitations
+
+* **`add-param` requires `--default`**: The tool operates on individual files and cannot discover
+  separate `PipelineRun` files that reference a `Pipeline` via `pipelineRef`. A Tekton parameter
+  without a default is "required", meaning the `PipelineRun` must supply a value. Since the tool cannot
+  add values to referencing `PipelineRun` files, omitting the default would create an unsatisfied
+  required parameter. Requiring `--default` avoids this: a parameter with a default is never
+  "required" in Tekton, so no `PipelineRun` breaks from a missing value.
 
 #### Known issues
 

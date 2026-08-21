@@ -1,18 +1,21 @@
-*.swp
-*~
-.coverage
-*.egg-info/
-.venv/
-dist/
+# Cache
 __pycache__/
-.tox/
-.idea/
-local-tests/
-htmlcov/
-.mypy_cache/
-.pytest_cache/
-.env
-.DS_Store
-.vscode/
 *.py[cod]
-*.swo
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# Environments
+.env
+.venv/
+venv/
+
+# Packaging
+*.egg-info/
+build/
+dist/
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/

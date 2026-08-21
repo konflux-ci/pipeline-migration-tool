@@ -682,6 +682,7 @@ def insert_text_at_line(
         ):
             current_line = 0
             replacing_lines_in_progress = 0
+            last_line = ""
 
             for line in original_file:
                 if replacing_lines_in_progress > 0:
@@ -707,11 +708,16 @@ def insert_text_at_line(
                     # Copy the original line
                     temp_file.write(line)
 
+                last_line = line
                 current_line += 1
 
             # Handle case where line_number is beyond file length or insert_index is negative
             # to append at the end file
             if insert_index < 0 or current_line <= insert_index:
+                # When a file doesn't end with an empty line, insert one first
+                # to prevent creating invalid yaml
+                if last_line and not last_line.endswith("\n"):
+                    temp_file.write("\n")
                 temp_file.write(text_to_insert)
 
         if validation_callback is not None:

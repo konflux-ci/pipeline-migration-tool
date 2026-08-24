@@ -147,7 +147,7 @@ def register_cli(subparser) -> None:
         "--pipeline-task-name",
         metavar="NAME",
         help="Specify an alternative name for the task configured in the pipeline. "
-        "If omitted, name is derived from the bundle repository name."
+        "If omitted, name is the actual task name. "
         "For example, for 'quay.io/konflux-ci/task-sast-coverity-check:0.1@sha256:...', "
         "the name will be actual task name 'sast-coverity-check'.",
     )

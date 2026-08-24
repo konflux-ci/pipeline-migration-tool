@@ -1726,3 +1726,50 @@ class TestModifyTaskErrorHandling:
         # Verify parameter was added with empty value
         pipeline_file = component_pipeline_dir.tekton_dir / "pipeline.yaml"
         verify_param_added(pipeline_file, "clone", "empty", "")
+
+
+class TestModifyTaskDryRun:
+    """Test --dry-run for modify task: preview changes without writing files."""
+
+    def test_dry_run_does_not_write(self, component_pipeline_dir, monkeypatch, capsys):
+        """Dry-run must leave the pipeline file unchanged."""
+        pipeline_file = component_pipeline_dir.tekton_dir / "pipeline.yaml"
+        before = pipeline_file.read_text()
+        cmd = [
+            "pmt",
+            "modify",
+            "--dry-run",
+            "--file-or-dir",
+            str(pipeline_file),
+            "task",
+            "clone",
+            "add-param",
+            "timeout",
+            "30m",
+        ]
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+
+        assert pipeline_file.read_text() == before
+
+    def test_dry_run_prints_diff(self, component_pipeline_dir, monkeypatch, capsys):
+        """Dry-run must print a unified diff of the would-be change."""
+        pipeline_file = component_pipeline_dir.tekton_dir / "pipeline.yaml"
+        cmd = [
+            "pmt",
+            "modify",
+            "--dry-run",
+            "--file-or-dir",
+            str(pipeline_file),
+            "task",
+            "clone",
+            "add-param",
+            "timeout",
+            "30m",
+        ]
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+        captured = capsys.readouterr()
+
+        assert "timeout" in captured.out
+        assert "30m" in captured.out

@@ -791,3 +791,66 @@ class TestModifyGenericYQIntegration:
         params = clone_task["params"]
         assert len(params) == 1
         assert params[0]["name"] == "url"  # Only url param should remain
+
+
+class TestModifyGenericDryRun:
+    """Test --dry-run for modify generic: preview changes without writing files."""
+
+    def test_dry_run_does_not_write(self, component_pipeline_dir, monkeypatch, capsys):
+        """Dry-run must leave the pipeline file unchanged."""
+        pipeline_file = component_pipeline_dir.tekton_dir / "pipeline.yaml"
+        before = pipeline_file.read_text()
+        cmd = [
+            "pmt",
+            "modify",
+            "--dry-run",
+            "--file-or-dir",
+            str(pipeline_file),
+            "generic",
+            "remove",
+            '["spec", "params", 0]',
+        ]
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+
+        assert pipeline_file.read_text() == before
+
+    def test_dry_run_prints_diff(self, component_pipeline_dir, monkeypatch, capsys):
+        """Dry-run must print a unified diff of the would-be change."""
+        pipeline_file = component_pipeline_dir.tekton_dir / "pipeline.yaml"
+        cmd = [
+            "pmt",
+            "modify",
+            "--dry-run",
+            "--file-or-dir",
+            str(pipeline_file),
+            "generic",
+            "remove",
+            '["spec", "params", 0]',
+        ]
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+        captured = capsys.readouterr()
+
+        assert "-    - name: repo-url" in captured.out
+
+    def test_dry_run_noop_prints_nothing(self, component_pipeline_dir, monkeypatch, capsys, caplog):
+        """Dry-run with no real change should not print anything."""
+        pipeline_file = component_pipeline_dir.tekton_dir / "pipeline.yaml"
+        cmd = [
+            "pmt",
+            "modify",
+            "--dry-run",
+            "--file-or-dir",
+            str(pipeline_file),
+            "generic",
+            "remove",
+            '["spec", "test-me-now"]',
+        ]
+        monkeypatch.setattr("sys.argv", cmd)
+        entry_point()
+        captured = capsys.readouterr()
+
+        assert "@@" not in captured.out
+        assert "Skipped file" in caplog.text
+        assert "doesn't exist in the doc" in caplog.text

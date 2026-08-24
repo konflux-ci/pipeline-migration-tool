@@ -15,7 +15,6 @@ from pipeline_migration.actions.migrate.cli import generate_upgrades_data
 import responses
 import pytest
 from oras.types import container_type
-from responses import matchers
 
 from pipeline_migration.cli import entry_point
 from pipeline_migration.actions.migrate.constants import (
@@ -25,9 +24,7 @@ from pipeline_migration.actions.migrate.constants import (
     MIGRATION_IMAGE_TAG_LIKE_PATTERN,
 )
 from pipeline_migration.actions.migrate.exceptions import InvalidRenovateUpgradesData
-from pipeline_migration.actions.migrate.main import (
-    clean_upgrades,
-)
+from pipeline_migration.actions.migrate.main import clean_upgrades
 from pipeline_migration.registry import (
     Container,
     MEDIA_TYPE_OCI_EMTPY_V1,
@@ -384,7 +381,7 @@ def mock_has_migration_images(image_repo: str, has: bool):
         api_url,
         json={"tags": tags, "page": 1, "has_additional": False},
         match=[
-            matchers.query_param_matcher(
+            query_param_matcher(
                 {
                     "page": "1",
                     "onlyActiveTags": "true",

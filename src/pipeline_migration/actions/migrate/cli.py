@@ -187,11 +187,8 @@ class DotTekton(Path):
 
 
 def search_pipeline_files() -> list[str]:
-    """Search pipeline files from .tekton/
+    """Search Pipeline and PipelineRun YAML files under ./.tekton/.
 
-    :param dir_path: A directory path from where to search pipeline files. Pipeline files are Tekton
-        Pipeline/PipelineRun YAML files.
-    :type dir_path: str
     :return: A list of pipeline file paths.
     :rtype: list[str]
     """

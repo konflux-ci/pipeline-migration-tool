@@ -47,6 +47,5 @@ class PackageFile:
     """Groups task bundle upgrades for a single pipeline file."""
 
     file_path: str  # Renovate template field packageFile
-    parent_dir: str  # Renovate template field parentDir
 
     task_bundle_upgrades: list[TaskBundleUpgrade] = field(default_factory=list)

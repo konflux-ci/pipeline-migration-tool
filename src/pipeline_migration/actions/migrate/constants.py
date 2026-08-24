@@ -13,7 +13,6 @@ ANNOTATION_TRUTH_VALUE: Final = "true"
 
 # Example:  0.1-18a61693389c6c912df587f31bc3b4cc53eb0d5b
 TASK_TAG_REGEXP: Final = r"^[0-9.]+-[0-9a-f]+$"
-DIGEST_REGEXP: Final = r"sha256:[0-9a-f]+"
 
 SCHEMA_UPGRADE: Final[dict[str, Any]] = {
     "$schema": "https://json-schema.org/draft/2020-12",

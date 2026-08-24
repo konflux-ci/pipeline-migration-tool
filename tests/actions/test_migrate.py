@@ -38,6 +38,7 @@ from pipeline_migration.actions.migrate.resolvers import (
 )
 from pipeline_migration.actions.migrate.resolvers.migration_images import (
     MigrationImageTag,
+    MigrationImagesResolver,
 )
 from pipeline_migration.actions.migrate.main import (
     TaskBundleUpgradesManager,
@@ -47,7 +48,6 @@ from pipeline_migration.actions.migrate.main import (
 )
 from pipeline_migration.actions.migrate.resolvers.simple import SimpleIterationResolver
 from pipeline_migration.actions.migrate.resolvers.linked_migrations import LinkedMigrationsResolver
-from pipeline_migration.actions.migrate.resolvers.migration_images import MigrationImagesResolver
 from pipeline_migration.quay import QuayTagInfo
 from pipeline_migration.registry import Container
 from pipeline_migration.utils import YAMLStyle, dump_yaml, load_yaml
@@ -56,7 +56,6 @@ from tests.utils import generate_digest, generate_sha256sum, generate_timestamp
 # Tags are listed from the latest to the oldest one.
 SAMPLE_TAGS_OF_NS_APP: Final = [
     {"name": "0.3-0c9b02c", "manifest_digest": "sha256:bfc0c3c", "start_ts": 7},
-    # {"name": "0.3", "manifest_digest": "sha256:bfc0c3c"},
     {"name": "0.2-23d463f", "manifest_digest": "sha256:2a2c2b7", "start_ts": 6},
     {"name": "0.1-d4eab53", "manifest_digest": "sha256:52f8b96", "start_ts": 5},
     {"name": "0.1-b486c47", "manifest_digest": "sha256:9bfc6b9", "start_ts": 4},
@@ -558,7 +557,7 @@ class TestMigrationFileOperationHandlePipelineFile:
             new_digest="sha256:96e797480ac5",
         )
 
-        self.package_file = PackageFile(file_path=".tekton/pipeline.yaml", parent_dir=".tekton")
+        self.package_file = PackageFile(file_path=".tekton/pipeline.yaml")
         self.package_file.task_bundle_upgrades.append(tb_upgrade)
 
         m = TaskBundleMigration(

@@ -191,10 +191,9 @@ class TaskBundleUpgradesManager:
         """Collect task bundle upgrades grouped by package file"""
         sorted_upgrades = sorted(upgrades, key=itemgetter("packageFile"))
         grouped_upgrades = groupby(sorted_upgrades, key=itemgetter("packageFile"))
-        for package_file, grouped_items in grouped_upgrades:
-            package_file = PackageFile(file_path=package_file, parent_dir="")
+        for package_file_path, grouped_items in grouped_upgrades:
+            package_file = PackageFile(file_path=package_file_path)
             for upgrade in grouped_items:
-                package_file.parent_dir = upgrade["parentDir"]
                 bundle_upgrade = TaskBundleUpgrade(
                     dep_name=upgrade["depName"],
                     current_value=upgrade["currentValue"],

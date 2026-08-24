@@ -1,6 +1,7 @@
 import argparse
 import logging
 
+from pipeline_migration import __version__
 from pipeline_migration.actions.add_task import register_cli as register_add_task_cli
 from pipeline_migration.actions.modify import register_cli as register_modify_cli
 from pipeline_migration.actions.migrate.cli import register_cli as register_migrate_cli
@@ -13,6 +14,7 @@ logger = logging.getLogger("cli")
 def main() -> None:
     """Parse CLI arguments and execute the requested subcommand."""
     parser = argparse.ArgumentParser(description="Pipeline migration tool for Konflux CI.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparser = parser.add_subparsers(title="subcommands to manage build pipelines", required=True)
     register_migrate_cli(subparser)
     register_add_task_cli(subparser)

@@ -155,7 +155,7 @@ class MigrationImagesResolver(Resolver):
             if len(files) > 1:
                 files_str = ", ".join(os.path.basename(file_path) for file_path in files)
                 raise ValueError(f"Migration image {image} has multiple files: {files_str}.")
-            with open(files[0], "r") as f:
+            with open(files[0]) as f:
                 return f.read()
 
     def _resolve_task(self, bundle_upgrade: TaskBundleUpgrade) -> None:

@@ -701,7 +701,7 @@ class TestMigrateTaskBundleUpgrade:
 
         def subprocess_run(cmd, *args, **kwargs):
             assert not kwargs.get("check")
-            content = open(cmd[1], "r").read().encode()
+            content = open(cmd[1]).read().encode()
 
             if content == first_migration_to_run:
                 # only fail the first migration of clone task
@@ -1504,7 +1504,7 @@ def test_apply_migration_by_bundle_references(
     monkeypatch.setattr("sys.argv", cli_cmd)
 
     # To check if expected pipeline files are handled
-    modified_package_files: set[str] = set([])
+    modified_package_files: set[str] = set()
 
     def _subprocess_run(cmd, *args, **kwargs):
         pipeline_file = cmd[-1]

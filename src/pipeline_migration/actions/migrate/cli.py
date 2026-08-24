@@ -4,7 +4,7 @@ import re
 from contextlib import suppress
 from pathlib import Path
 from typing import Final
-from typing import Iterable
+from collections.abc import Iterable
 
 from oras.container import Container
 from ruamel.yaml import YAML
@@ -223,7 +223,7 @@ def generate_upgrades_data(new_bundles: list[str], pipeline_files: list[str]) ->
     )
     upgrades: list[RenovateUpgradeT] = []
     for pipeline_file in pipeline_files:
-        with open(pipeline_file, "r") as f:
+        with open(pipeline_file) as f:
             content = f.read()
         for bundle_ref in new_bundles:
             new_c = Container(bundle_ref)

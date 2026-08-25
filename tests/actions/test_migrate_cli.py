@@ -1465,7 +1465,7 @@ PUSH_PIPELINE_RUN_YAML_UP_TO_DATE: Final = dedent(f"""\
 )
 def test_apply_migration_by_bundle_references(
     request, push_pipeline_run_yaml, mock_migration_images, component_a_repo, caplog, monkeypatch
-):
+) -> None:
     """Test apply migration by specifying --new-bundle and --pipeline-file"""
 
     caplog.set_level(logging.DEBUG, logger="migrate")

@@ -751,7 +751,7 @@ class TestLinkedMigrationsResolver:
             case "single":
                 # bundle@new_digest --> bundle@sha256:9bfc6b9 (M)
 
-                migration_bundle_digest: Final = "sha256:9bfc6b9"
+                migration_bundle_digest = "sha256:9bfc6b9"
 
                 c = Container(f"{tb_upgrade.dep_name}@{tb_upgrade.new_digest}")
                 mock_get_manifest(

@@ -8,7 +8,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from pipeline_migration.yamleditor import EditYAMLEntry, YAMLPath
 from pipeline_migration.utils import YAMLStyle, create_yaml_obj, load_yaml
-from pipeline_migration.pipeline import iterate_files_or_dirs
+from pipeline_migration.actions.modify.common import run_modify
 
 logger = logging.getLogger("modify.generic")
 
@@ -269,17 +269,8 @@ class ModGenericInsert(ModGenericBase):
 
 def action_insert(args) -> None:
     """CLI action handler to insert content at a YAML path in pipeline files."""
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModGenericInsert(args.yaml_path, args.value)
-    for file_path in iterate_files_or_dirs(search_places):
-        try:
-            op.handle(str(file_path))
-        except YAMLPathNotFoundError as e:
-            logger.warning("Skipped file %s update: %s", file_path, e)
+    run_modify(op, args, skip_on=(YAMLPathNotFoundError,))
 
 
 class ModGenericReplace(ModGenericBase):
@@ -299,17 +290,8 @@ class ModGenericReplace(ModGenericBase):
 
 def action_replace(args) -> None:
     """CLI action handler to replace content at a YAML path in pipeline files."""
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModGenericReplace(args.yaml_path, args.value)
-    for file_path in iterate_files_or_dirs(search_places):
-        try:
-            op.handle(str(file_path))
-        except YAMLPathNotFoundError as e:
-            logger.warning("Skipped file %s update: %s", file_path, e)
+    run_modify(op, args, skip_on=(YAMLPathNotFoundError,))
 
 
 class ModGenericRemove(ModGenericBase):
@@ -328,14 +310,5 @@ class ModGenericRemove(ModGenericBase):
 
 def action_remove(args) -> None:
     """CLI action handler to remove content at a YAML path in pipeline files."""
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModGenericRemove(args.yaml_path)
-    for file_path in iterate_files_or_dirs(search_places):
-        try:
-            op.handle(str(file_path))
-        except YAMLPathNotFoundError as e:
-            logger.warning("Skipped file %s update: %s", file_path, e)
+    run_modify(op, args, skip_on=(YAMLPathNotFoundError,))

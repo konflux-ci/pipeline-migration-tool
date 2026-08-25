@@ -3,7 +3,6 @@ import argparse
 import copy
 from enum import Enum
 import logging
-from pathlib import Path
 from typing import Any, Final, List
 
 from ruamel.yaml.comments import CommentedSeq
@@ -11,8 +10,9 @@ from ruamel.yaml.comments import CommentedSeq
 from pipeline_migration.yamleditor import EditYAMLEntry, YAMLPath
 from pipeline_migration.types import FilePath
 from pipeline_migration.utils import YAMLStyle, load_yaml
-from pipeline_migration.pipeline import PipelineFileOperation, iterate_files_or_dirs
+from pipeline_migration.pipeline import PipelineFileOperation
 from pipeline_migration.actions.add_task import get_task_bundle_reference
+from pipeline_migration.actions.modify.common import run_modify
 
 logger = logging.getLogger("modify.task")
 
@@ -413,14 +413,8 @@ def action_add_param(args) -> None:
             raise RuntimeError("Param value must be only one item with string type")
         value = value[0]  # extract value when type is string
 
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModTaskAddParamOperation(args.task_name, args.param_name, value)
-    for file_path in iterate_files_or_dirs(search_places):
-        op.handle(str(file_path))
+    run_modify(op, args)
 
 
 class ModTaskRemoveParamOperation(TaskBase):
@@ -488,14 +482,8 @@ class ModTaskRemoveParamOperation(TaskBase):
 
 def action_remove_param(args) -> None:
     """CLI action handler to remove a parameter from a task in pipeline files."""
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModTaskRemoveParamOperation(args.task_name, args.param_name)
-    for file_path in iterate_files_or_dirs(search_places):
-        op.handle(str(file_path))
+    run_modify(op, args)
 
 
 class ModTaskMatrixAddParamOperation(TaskBase):
@@ -630,14 +618,8 @@ def action_matrix_add_param(args) -> None:
             raise RuntimeError("Param value must be only one item with string type")
         value = value[0]  # extract value when type is string
 
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModTaskMatrixAddParamOperation(args.task_name, args.param_name, value)
-    for file_path in iterate_files_or_dirs(search_places):
-        op.handle(str(file_path))
+    run_modify(op, args)
 
 
 class ModTaskMatrixRemoveParamOperation(TaskBase):
@@ -717,14 +699,8 @@ class ModTaskMatrixRemoveParamOperation(TaskBase):
 
 def action_matrix_remove_param(args) -> None:
     """CLI action handler to remove a matrix parameter from a task in pipeline files."""
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModTaskMatrixRemoveParamOperation(args.task_name, args.param_name)
-    for file_path in iterate_files_or_dirs(search_places):
-        op.handle(str(file_path))
+    run_modify(op, args)
 
 
 class ModTaskRenameOperation(TaskBase):
@@ -839,17 +815,11 @@ class ModTaskRenameOperation(TaskBase):
 
 def action_rename(args) -> None:
     """CLI action handler to rename a task in pipeline files."""
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModTaskRenameOperation(args.task_name, args.new_name, args.task_ref_name)
-    for file_path in iterate_files_or_dirs(search_places):
-        try:
-            op.handle(str(file_path))
-        except DuplicateTaskNameError as e:
-            raise SystemExit(f"error: {e}") from e
+    try:
+        run_modify(op, args)
+    except DuplicateTaskNameError as e:
+        raise SystemExit(f"error: {e}") from e
 
 
 class ModTaskSetBundleOperation(TaskBase):
@@ -934,11 +904,5 @@ class ModTaskSetBundleOperation(TaskBase):
 
 def action_set_bundle(args) -> None:
     """CLI action handler to set the bundle in taskRef.params for a task in pipeline files."""
-    search_places = [path for path in args.file_or_dir if path]
-    relative_tekton_dir = Path("./.tekton")
-    if not search_places and relative_tekton_dir.exists():
-        search_places = [str(relative_tekton_dir.absolute())]
-
     op = ModTaskSetBundleOperation(args.task_name, args.bundle_ref, args.task_ref_name)
-    for file_path in iterate_files_or_dirs(search_places):
-        op.handle(str(file_path))
+    run_modify(op, args)

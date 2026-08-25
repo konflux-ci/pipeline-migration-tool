@@ -5,7 +5,7 @@ import tempfile
 import textwrap
 from pathlib import Path
 from collections.abc import Sequence
-from typing import Union, TypeAlias, List, Tuple, Any
+from typing import Any
 from io import StringIO
 
 from ruamel.yaml import CommentedMap, CommentedSeq
@@ -22,8 +22,8 @@ from pipeline_migration.utils import load_yaml, create_yaml_obj, YAMLStyle, is_f
 #   - entry: zero
 #   - entry: one
 #
-YAMLPath: TypeAlias = Sequence[Union[int, str]]
-PathStack: TypeAlias = List[Tuple[CommentedSeq | CommentedMap, str | int | None]]
+YAMLPath = Sequence[int | str]
+PathStack = list[tuple[CommentedSeq | CommentedMap, str | int | None]]
 
 # End of file constant
 EOF = -1
@@ -495,7 +495,7 @@ class EditYAMLEntry:
 
     def _pre_process_flow_style_replace(
         self, path_stack, data: Any
-    ) -> Tuple[PathStack, dict | list]:
+    ) -> tuple[PathStack, dict | list]:
         """Flow style isn't fully supported, to comply with it, we will just use the yaml parser
         to generate  the whole block since the first block style parent entry.
         If first block is doc root, then everything will be regenerated.
@@ -601,7 +601,7 @@ def remove_lines_from_file(
     try:
         with (
             os.fdopen(temp_fd, "w", encoding="utf-8") as temp_file,
-            open(file_path, "r", encoding="utf-8") as original_file,
+            open(file_path, encoding="utf-8") as original_file,
         ):
             current_line = 0
 
@@ -678,7 +678,7 @@ def insert_text_at_line(
     try:
         with (
             os.fdopen(temp_fd, "w", encoding="utf-8") as temp_file,
-            open(file_path, "r", encoding="utf-8") as original_file,
+            open(file_path, encoding="utf-8") as original_file,
         ):
             current_line = 0
             replacing_lines_in_progress = 0

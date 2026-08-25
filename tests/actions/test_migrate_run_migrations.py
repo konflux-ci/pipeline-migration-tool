@@ -3,7 +3,7 @@ import logging
 import os
 import os.path
 from textwrap import dedent, indent
-from typing import Callable
+from collections.abc import Callable
 
 import pytest
 import responses

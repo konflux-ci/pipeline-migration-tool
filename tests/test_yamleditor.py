@@ -37,7 +37,7 @@ def empty_temp_file(create_yaml_file):
 
 def read_file_content(file_path: str) -> str:
     """Helper function to read file content."""
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         return f.read()
 
 
@@ -873,7 +873,7 @@ class TestEditYAMLEntry:
             name: test-pipeline
             """)
 
-        with open(simple_yaml_file, "r") as f:
+        with open(simple_yaml_file) as f:
             content = f.read()
             assert content == expected
 
@@ -1676,7 +1676,7 @@ class TestEditYAMLEntryFlowStyle:
                     value: 999
             """)
 
-        with open(simple_yaml_file_flow, "r") as f:
+        with open(simple_yaml_file_flow) as f:
             content = f.read()
             assert content == expected
 
@@ -1699,7 +1699,7 @@ class TestEditYAMLEntryFlowStyle:
                     value: new-value
             """)
 
-        with open(simple_yaml_file_flow, "r") as f:
+        with open(simple_yaml_file_flow) as f:
             content = f.read()
             assert content == expected
 
@@ -1717,7 +1717,7 @@ class TestEditYAMLEntryFlowStyle:
                   taskRef: {name: clone}
             """)
 
-        with open(simple_yaml_file_flow, "r") as f:
+        with open(simple_yaml_file_flow) as f:
             content = f.read()
             assert content == expected
 

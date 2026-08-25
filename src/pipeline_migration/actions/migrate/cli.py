@@ -4,7 +4,7 @@ import re
 from contextlib import suppress
 from pathlib import Path
 from typing import Final
-from typing import Iterable
+from collections.abc import Iterable
 
 from oras.container import Container
 from ruamel.yaml import YAML
@@ -187,11 +187,8 @@ class DotTekton(Path):
 
 
 def search_pipeline_files() -> list[str]:
-    """Search pipeline files from .tekton/
+    """Search Pipeline and PipelineRun YAML files under ./.tekton/.
 
-    :param dir_path: A directory path from where to search pipeline files. Pipeline files are Tekton
-        Pipeline/PipelineRun YAML files.
-    :type dir_path: str
     :return: A list of pipeline file paths.
     :rtype: list[str]
     """
@@ -226,7 +223,7 @@ def generate_upgrades_data(new_bundles: list[str], pipeline_files: list[str]) ->
     )
     upgrades: list[RenovateUpgradeT] = []
     for pipeline_file in pipeline_files:
-        with open(pipeline_file, "r") as f:
+        with open(pipeline_file) as f:
             content = f.read()
         for bundle_ref in new_bundles:
             new_c = Container(bundle_ref)

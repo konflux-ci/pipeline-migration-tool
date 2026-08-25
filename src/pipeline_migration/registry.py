@@ -7,7 +7,7 @@ from oras.provider import Registry as OrasRegistry
 from oras.container import Container as OrasContainer
 from oras.decorator import ensure_container
 from oras.types import container_type
-from requests.models import Response as Response
+from requests.models import Response
 
 from pipeline_migration.types import AnnotationsT, ImageIndexT, DescriptorT
 
@@ -73,9 +73,6 @@ class Container(OrasContainer):
 
 class Registry(OrasRegistry):
     """OCI registry client with blob fetching, artifact retrieval, and referrers support."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     @ensure_container
     def get_blob(self, *args, **kwargs) -> Response:

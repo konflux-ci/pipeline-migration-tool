@@ -3,7 +3,7 @@ import argparse
 import copy
 from enum import Enum
 import logging
-from typing import Any, Final, List
+from typing import Any, Final
 
 from ruamel.yaml.comments import CommentedSeq
 
@@ -158,7 +158,7 @@ class TaskBase(PipelineFileOperation):
         self._handle_paths(yaml_paths, file_path, loaded_doc, style)
 
     def _handle_paths(
-        self, yaml_paths: List[List[str]], file_path: FilePath, loaded_doc: Any, style: YAMLStyle
+        self, yaml_paths: list[list[str]], file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ):
         not_found_task = [False] * len(yaml_paths)
 
@@ -308,7 +308,7 @@ class ModTaskAddParamOperation(TaskBase):
         self,
         task_name: str,
         param_name: str,
-        param_value: str | List[str],
+        param_value: str | list[str],
     ) -> None:
         super().__init__(task_name)
         self.param_name = param_name
@@ -493,7 +493,7 @@ class ModTaskMatrixAddParamOperation(TaskBase):
         self,
         task_name: str,
         param_name: str,
-        param_value: str | List[str],
+        param_value: str | list[str],
     ) -> None:
         super().__init__(task_name)
         self.param_name = param_name
@@ -750,7 +750,7 @@ class ModTaskRenameOperation(TaskBase):
         raise TaskNotFoundError
 
     def _check_new_name_is_available(
-        self, loaded_doc: Any, task_paths: List[List[str]], file_path: FilePath
+        self, loaded_doc: Any, task_paths: list[list[str]], file_path: FilePath
     ) -> None:
         """Raise DuplicateTaskNameError if new_name is already used by a different task."""
         for path in task_paths:
@@ -767,7 +767,7 @@ class ModTaskRenameOperation(TaskBase):
                     )
 
     def _update_run_after_refs(
-        self, file_path: FilePath, style: YAMLStyle, task_paths: List[List[str]]
+        self, file_path: FilePath, style: YAMLStyle, task_paths: list[list[str]]
     ) -> None:
         """Replace occurrences of the old task name with the new name in all runAfter lists."""
         for path_prefix in task_paths:
@@ -796,7 +796,7 @@ class ModTaskRenameOperation(TaskBase):
                 )
 
     def handle_pipeline_file(self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle) -> None:
-        task_paths: List[List[str]] = [["spec", "tasks"], ["spec", "finally"]]
+        task_paths: list[list[str]] = [["spec", "tasks"], ["spec", "finally"]]
         self._check_new_name_is_available(loaded_doc, task_paths, file_path)
         super().handle_pipeline_file(file_path, loaded_doc, style)
         self._update_run_after_refs(file_path, style, task_paths)
@@ -804,7 +804,7 @@ class ModTaskRenameOperation(TaskBase):
     def handle_pipeline_run_file(
         self, file_path: FilePath, loaded_doc: Any, style: YAMLStyle
     ) -> None:
-        task_paths: List[List[str]] = [
+        task_paths: list[list[str]] = [
             ["spec", "pipelineSpec", "tasks"],
             ["spec", "pipelineSpec", "finally"],
         ]

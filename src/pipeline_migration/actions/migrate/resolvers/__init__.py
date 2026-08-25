@@ -205,7 +205,6 @@ def list_bundle_tags(bundle_upgrade: TaskBundleUpgrade) -> list[dict]:
     return sorted(tags, key=operator.itemgetter("start_ts"), reverse=True)
 
 
-# TODO: cache this as well?
 def determine_task_bundle_upgrades_range(
     task_bundle_upgrade: TaskBundleUpgrade,
 ) -> list[QuayTagInfo]:

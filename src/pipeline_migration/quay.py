@@ -48,8 +48,7 @@ def list_active_repo_tags(
         resp = requests.get(api_url, params=params)
         resp.raise_for_status()
         data = resp.json()
-        for tag in data["tags"]:
-            yield tag
+        yield from data["tags"]
         if not data.get("has_additional"):
             break
         page = int(data["page"]) + 1

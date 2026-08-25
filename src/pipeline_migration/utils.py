@@ -126,7 +126,7 @@ def create_yaml_obj(style: YAMLStyle | None = None) -> YAML:
 
 def load_yaml(yaml_file: FilePath, style: YAMLStyle | None = None) -> Any:
     """Load and parse a YAML file, optionally applying a style configuration."""
-    with open(yaml_file, "r", encoding="utf-8") as f:
+    with open(yaml_file, encoding="utf-8") as f:
         return create_yaml_obj(style).load(f)
 
 

@@ -24,8 +24,8 @@ class DecentralizationTransitionResolverProxy(Resolver):
     def _resolve_migrations(
         self, bundle_upgrade: TaskBundleUpgrade, upgrades_range: list[QuayTagInfo]
     ) -> Generator[TaskBundleMigration, Any, None]:
-        """This method is useless for proxy"""
-        yield TaskBundleMigration("", "")  # yield empty instance to fulfill linters
+        # Required by Resolver; the proxy overrides _resolve_task instead.
+        yield from ()
 
     def _resolve_task(self, bundle_upgrade: TaskBundleUpgrade) -> None:
         repo = bundle_upgrade.dep_name

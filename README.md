@@ -188,6 +188,15 @@ the same with `pmt modify`:
   pmt modify -f "$pipeline_file" task sast-coverity-check add-param image-url "$image_url_value"
 ```
 
+#### Dry-run
+
+`--dry-run` prints a unified diff of the changes that would be made and leaves
+the original pipeline file unchanged. It applies to all `modify` subcommands.
+
+```bash
+  pmt modify --dry-run -f "$pipeline_file" task sast-coverity-check add-param image-url "$image_url_value"
+```
+
 Get more information about supported resources by `pmt modify -h`, and supported commands
 for the given resource by `pmt modify RESOURCE -h` (for example `pmt modify task -h`).
 

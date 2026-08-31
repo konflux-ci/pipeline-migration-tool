@@ -322,17 +322,8 @@ class EditYAMLEntry:
             parent_node = copy.deepcopy(parent_node)  # avoid reusing reference
             del parent_node[scalar_key]
 
-            # Check if parent is now empty, and if so, cascade delete
-            # This is similar to the cascade deletion logic for non-scalar values
             parent_path = path[:-1]
-
-            # If parent is now empty, we should delete the parent instead
-            if len(parent_node) == 0 and len(parent_path) > 0:
-                # Parent became empty, delete it instead (cascade)
-                return self.delete(parent_path)
-
-            # Parent is not empty, just replace it
-            return self.replace(parent_path, parent_node)
+            return self._delete_or_replace_parent(parent_node, parent_path)
 
         path_stack = self._get_path_stack(path)
 
@@ -371,6 +362,14 @@ class EditYAMLEntry:
             lineno = last_node.ca.comment[1][0].start_mark.line
 
         if self._is_parent_dict(path_stack):
+            parent_node, key = path_stack[-2]
+            if key is not None and self._is_first_key_in_seq_item(path_stack):
+                # Won't recurse further: this requires parent=dict in grandparent=list,
+                # but after one fallback the parent becomes the list, so it stops.
+                parent_node = copy.deepcopy(parent_node)
+                del parent_node[key]
+                parent_path = path[:-1]
+                return self._delete_or_replace_parent(parent_node, parent_path)
             # to also remove dict key, we have to do -1 in lineno
             lineno = max(lineno - 1, 0)
 
@@ -395,12 +394,30 @@ class EditYAMLEntry:
         )
         self.invalidate_yaml_data()
 
+    def _delete_or_replace_parent(self, parent_node, parent_path):
+        """Cascade-delete if parent is now empty, otherwise replace it."""
+        if len(parent_node) == 0 and len(parent_path) > 0:
+            return self.delete(parent_path)
+        return self.replace(parent_path, parent_node)
+
     def _is_parent_dict(self, path_stack: PathStack) -> bool:
         """Return True if the parent node in the path stack is a dict."""
         if len(path_stack) > 1:
             parent, _ = path_stack[-2]
             return isinstance(parent, dict)
         return False
+
+    @staticmethod
+    def _is_first_key_in_seq_item(path_stack: PathStack) -> bool:
+        """Return True if the parent key (at path_stack[-2][1]) is the first key
+        of a mapping that is a sequence item."""
+        if len(path_stack) < 3:
+            return False
+        parent, key = path_stack[-2]
+        grandparent, _ = path_stack[-3]
+        return (
+            isinstance(parent, dict) and isinstance(grandparent, list) and next(iter(parent)) == key
+        )
 
     def _get_next_entry_line(self, path_stack: PathStack) -> int:
         """Find lineno where the next item in yaml starts.

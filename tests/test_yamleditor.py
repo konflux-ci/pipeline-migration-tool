@@ -1188,6 +1188,109 @@ class TestEditYAMLEntry:
         path_stack = editor._get_path_stack(yaml_path)
         assert editor._get_next_entry_line(path_stack) == expected_lineno
 
+    def test_delete_first_key_with_nonscalar_value_single_item(self, create_yaml_file):
+        """Removing the first key (with a mapping value) of the only array item
+        must preserve the array structure."""
+        content = dedent("""\
+            items:
+              - attrs:
+                  x: 1
+                  y: 2
+                name: foo
+            """)
+        yaml_file = create_yaml_file(content)
+        style = YAMLStyle.detect(yaml_file)
+        editor = EditYAMLEntry(yaml_file, style)
+
+        editor.delete(["items", 0, "attrs"])
+
+        expected = dedent("""\
+            items:
+              - name: foo
+            """)
+        assert read_file_content(yaml_file) == expected
+
+    def test_delete_first_key_with_nonscalar_value_first_item(self, create_yaml_file):
+        """Removing the first key (with a mapping value) of the first item in a
+        multi-item array must preserve both items."""
+        content = dedent("""\
+            items:
+              - attrs:
+                  x: 1
+                  y: 2
+                name: foo
+              - attrs:
+                  x: 3
+                  y: 4
+                name: bar
+            """)
+        yaml_file = create_yaml_file(content)
+        style = YAMLStyle.detect(yaml_file)
+        editor = EditYAMLEntry(yaml_file, style)
+
+        editor.delete(["items", 0, "attrs"])
+
+        expected = dedent("""\
+            items:
+              - name: foo
+              - attrs:
+                  x: 3
+                  y: 4
+                name: bar
+            """)
+        assert read_file_content(yaml_file) == expected
+
+    def test_delete_first_key_with_nonscalar_value_second_item(self, create_yaml_file):
+        """Removing the first key (with a mapping value) of a non-first array item
+        must not merge it with the preceding item."""
+        content = dedent("""\
+            items:
+              - attrs:
+                  x: 1
+                  y: 2
+                name: foo
+              - attrs:
+                  x: 3
+                  y: 4
+                name: bar
+            """)
+        yaml_file = create_yaml_file(content)
+        style = YAMLStyle.detect(yaml_file)
+        editor = EditYAMLEntry(yaml_file, style)
+
+        editor.delete(["items", 1, "attrs"])
+
+        expected = dedent("""\
+            items:
+              - attrs:
+                  x: 1
+                  y: 2
+                name: foo
+              - name: bar
+            """)
+        assert read_file_content(yaml_file) == expected
+
+    def test_delete_first_key_with_list_value(self, create_yaml_file):
+        """Removing the first key whose value is a list must preserve the array marker."""
+        content = dedent("""\
+            items:
+              - tags:
+                  - alpha
+                  - beta
+                name: foo
+            """)
+        yaml_file = create_yaml_file(content)
+        style = YAMLStyle.detect(yaml_file)
+        editor = EditYAMLEntry(yaml_file, style)
+
+        editor.delete(["items", 0, "tags"])
+
+        expected = dedent("""\
+            items:
+              - name: foo
+            """)
+        assert read_file_content(yaml_file) == expected
+
 
 class TestEditYAMLEntryComments:
     """Tests to make sure comments are preserved"""

@@ -21,15 +21,21 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
+  "jsonschema==4.26.0",
+  "oras==0.2.42",
+  "packaging==26.2",
   "requests==2.34.2",
   "ruamel.yaml==0.19.1",
-  "oras==0.2.42",
-  "jsonschema==4.26.0",
-  "packaging==26.2",
 ]
 
 [project.optional-dependencies]
 test = [
+  # Black guarantees stable style in versions released in the same calendar year,
+  # but not across years. Pin the major version (which follows the release year).
+  # https://black.readthedocs.io/en/stable/the_black_code_style/index.html#stability-policy
+  "black~=26.0",
+  "flake8",
+  "mypy",
   "pytest",
   "pytest-cov",
   "responses",

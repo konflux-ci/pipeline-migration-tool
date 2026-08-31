@@ -7,7 +7,6 @@ from typing import Any, Final
 import pytest
 import responses
 from responses.matchers import query_param_matcher
-from ruamel.yaml.comments import CommentedSeq
 
 from pipeline_migration.cli import entry_point
 from pipeline_migration.pipeline import PipelineFileOperation
@@ -68,7 +67,7 @@ class VerifyUpdatedPipeline(PipelineFileOperation):
             tasks_section = loaded_doc["spec"]["pipelineSpec"]["tasks"]
         self.verify(tasks_section)
 
-    def verify(self, tasks: CommentedSeq):
+    def verify(self, tasks: list[dict[str, Any]]):
         expected_pipeline_task_name = self.pipeline_task_name or self.task_name
         tasks = [item for item in tasks if item["name"] == expected_pipeline_task_name]
         assert len(tasks) == 1

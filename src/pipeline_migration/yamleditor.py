@@ -156,7 +156,7 @@ class EditYAMLEntry:
             assert isinstance(p, (int, str))
             path_stack.append((current_data, p))
             current_data = current_data[p]
-        if not isinstance(current_data, (dict, list)):
+        if not isinstance(current_data, (CommentedMap, CommentedSeq)):
             if not allow_scalar:
                 raise ValueError(
                     f"Path must point to list/dict object. Given path {path} does not."
@@ -349,6 +349,7 @@ class EditYAMLEntry:
 
         if is_flow_style_seq(last_node):
             # we must update the parent via replacing
+            data: CommentedSeq | CommentedMap
             if len(path_stack) > 1:
                 parent_node, parent_index = path_stack[-2]
                 path = path[:-1]  # instead of deleting item replace content of the parent
@@ -358,7 +359,7 @@ class EditYAMLEntry:
                 del data[parent_index]
             else:
                 # removing root node ?
-                data = {}
+                data = CommentedMap()
 
             return self.replace(path, data)
 

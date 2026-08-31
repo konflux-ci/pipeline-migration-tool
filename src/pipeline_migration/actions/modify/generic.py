@@ -9,6 +9,7 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 from pipeline_migration.yamleditor import EditYAMLEntry, YAMLPath
 from pipeline_migration.utils import YAMLStyle, create_yaml_obj, load_yaml
 from pipeline_migration.actions.modify.common import run_modify
+from pipeline_migration.actions.modify.common import get_nested
 
 logger = logging.getLogger("modify.generic")
 
@@ -220,16 +221,8 @@ class ModGenericBase:
 
     def validate_yaml_path(self, loaded_doc: Any, allow_scalar: bool = False):
         """Validate that the YAML path exists and points to a valid node type."""
-
-        def get_path_doc(ypath):
-            """:raises KeyError: when path doesn't exist"""
-            tmp_doc = copy.copy(loaded_doc)
-            for p in ypath:
-                tmp_doc = tmp_doc[p]
-            return tmp_doc
-
         try:
-            tmp_doc = get_path_doc(self.yaml_path)
+            tmp_doc = get_nested(copy.copy(loaded_doc), self.yaml_path)
         except KeyError:
             raise YAMLPathNotFoundError(
                 f"Given YAML path {self.yaml_path} doesn't exist in the doc"

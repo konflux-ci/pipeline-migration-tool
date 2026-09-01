@@ -45,6 +45,11 @@ def image_manifest() -> ManifestT:
                 "mediaType": MEDIA_TYPE_OCI_IMAGE_LAYER_V1_TAR_GZ,
                 "digest": "sha256:498ce84ac04c70f2bce9630eec216a33f8ab0f345702a830826548f773e351ec",
                 "size": 200,
+                "annotations": {
+                    "dev.tekton.image.apiVersion": "v1",
+                    "dev.tekton.image.kind": "task",
+                    "dev.tekton.image.name": "push",
+                },
             },
         ],
         "annotations": {},

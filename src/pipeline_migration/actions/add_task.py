@@ -11,6 +11,7 @@ from pipeline_migration.quay import get_active_tag
 from pipeline_migration.registry import REGISTRY, Container
 from pipeline_migration.types import FilePath
 from pipeline_migration.pipeline import PipelineFileOperation, iterate_files_or_dirs
+from pipeline_migration.registry import Registry
 from pipeline_migration.yamleditor import EditYAMLEntry
 from pipeline_migration.utils import YAMLStyle, git_add
 
@@ -146,9 +147,9 @@ def register_cli(subparser) -> None:
         "--pipeline-task-name",
         metavar="NAME",
         help="Specify an alternative name for the task configured in the pipeline. "
-        "If omitted, name is derived from the bundle repository name."
-        "For example, from 'quay.io/konflux-ci/task-sast-coverity-check:0.1@sha256:...' "
-        "the name will be 'task-sast-coverity-check'.",
+        "If omitted, name is the actual task name. "
+        "For example, for 'quay.io/konflux-ci/task-sast-coverity-check:0.1@sha256:...', "
+        "the name will be actual task name 'sast-coverity-check'.",
     )
     add_task_parser.add_argument(
         "-a",
@@ -385,13 +386,36 @@ def extract_task_names(tasks: CommentedSeq) -> tuple[set[str], set[str]]:
     return pipeline_names, actual_names
 
 
+def get_actual_task_name(bundle_ref: Container) -> str:
+    """Get actual task name from a bundle image
+
+    :param bundle_ref: The bundle reference.
+    :type bundle_ref: Container
+    :return: the actual task name inspected from bundle image manifest.
+    :rtype: str
+    :raises: ``RuntimeError`` if bundle reference does not point to a single-task bundle image.
+    """
+    manifest = Registry().get_manifest(bundle_ref)
+    task_names: list[str] = []
+    for layer in manifest.get("layers", []):
+        annotations = layer.get("annotations", {})
+        kind = annotations.get("dev.tekton.image.kind")
+        name = annotations.get("dev.tekton.image.name")
+        if kind == "task" and name:
+            task_names.append(name)
+    if len(task_names) == 1:
+        return task_names[0]
+    msg = f"{bundle_ref.uri_with_tag} does not point to a single-task bundle image."
+    raise RuntimeError(msg)
+
+
 def action(args) -> None:
     """Execute the add-task command with the parsed CLI arguments."""
     bundle_ref: str = args.bundle_ref
 
     container = Container(bundle_ref)
 
-    actual_task_name = container.repository.split("/")[-1]
+    actual_task_name = get_actual_task_name(container)
     pipeline_task_name = args.pipeline_task_name or actual_task_name.removesuffix("-oci-ta")
 
     logger.info("Adding task %s, bundle %s", actual_task_name, bundle_ref)

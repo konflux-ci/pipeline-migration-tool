@@ -375,6 +375,51 @@ class TestTaskBundleUpgradesManagerCollectUpgrades:
         self.assert_bundle_upgrade_is_reused(manager)
 
 
+class TestTaskBundleUpgradesManagerApplyMigrations:
+
+    @pytest.mark.parametrize(
+        "yaml_content",
+        [
+            pytest.param(
+                "apiVersion: tekton.dev/v1\nkind: Pipeline\n\tinvalid: value\n",
+                id="tab-in-yaml",
+            ),
+            pytest.param(
+                "[{' invalid --",
+                id="invalid-yaml",
+            ),
+            pytest.param(
+                "123",
+                id="not-a-dict",
+            ),
+            pytest.param(
+                "key: value\n",
+                id="not-a-pipeline",
+            ),
+        ],
+    )
+    def test_invalid_pipeline_file_logs_warning_and_debug_details(
+        self, yaml_content, tmp_path, caplog
+    ):
+        pipeline_file = tmp_path / "invalid.yaml"
+        pipeline_file.write_text(yaml_content)
+        upgrades = [
+            {
+                "depName": TASK_BUNDLE_CLONE,
+                "currentValue": "0.1",
+                "currentDigest": "sha256:abc",
+                "newValue": "0.2",
+                "newDigest": "sha256:def",
+                "packageFile": str(pipeline_file),
+            }
+        ]
+        manager = TaskBundleUpgradesManager(upgrades, SimpleIterationResolver)
+        assert [] == manager.apply_migrations(skip_bundles=[])
+
+        pattern = re.compile(r"Skipping .*file")
+        assert re.search(pattern, caplog.text)
+
+
 class TestFetchMigrationFile:
 
     def setup_method(self, method):

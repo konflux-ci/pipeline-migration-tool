@@ -12,6 +12,7 @@ from typing import Any
 
 from jsonschema.exceptions import ValidationError
 from jsonschema.validators import Draft202012Validator
+from ruamel.yaml.error import YAMLError
 
 from pipeline_migration.actions.migrate.constants import (
     ANNOTATION_IS_MIGRATION,
@@ -31,7 +32,7 @@ from pipeline_migration.actions.migrate.resolvers.migration_images import Migrat
 
 from pipeline_migration.quay import list_active_repo_tags
 from pipeline_migration.registry import REGISTRY, Container, ImageIndex, Registry
-from pipeline_migration.pipeline import PipelineFileOperation
+from pipeline_migration.pipeline import NotAPipelineFile, PipelineFileOperation
 from pipeline_migration.types import FilePath
 from pipeline_migration.utils import file_checksum, is_true, load_yaml, dump_yaml, YAMLStyle
 
@@ -216,7 +217,7 @@ class TaskBundleUpgradesManager:
         """Resolve migrations for given task bundle upgrades"""
         self._resolver.resolve(list(self._task_bundle_upgrades.values()))
 
-    def apply_migrations(self, skip_bundles: list[str]) -> None:
+    def apply_migrations(self, skip_bundles: list[str]) -> list[str]:
         """Apply migrations to package files
 
         Before calling this method, migrations must be resolved in advance.
@@ -228,6 +229,8 @@ class TaskBundleUpgradesManager:
         :raises: ExceptionGroup
         """
         errors: list[Exception] = []
+        processed_files: list[str] = []
+
         for package_file in self.package_files:
             try:
                 if not os.path.exists(package_file.file_path):
@@ -237,10 +240,27 @@ class TaskBundleUpgradesManager:
                 ]
                 op = TransitionToModifyCommandOperation(bundle_upgrades)
                 op.handle(package_file.file_path)
+                processed_files.append(package_file.file_path)
+            except NotAPipelineFile as e:
+                logger.warning(
+                    "Skipping file '%s': %s",
+                    package_file.file_path,
+                    e,
+                )
+            except YAMLError as e:
+                error_message = " ".join(str(e).split())
+                logger.warning(
+                    "Skipping invalid pipeline file '%s': %s: %s",
+                    package_file.file_path,
+                    type(e).__name__,
+                    error_message,
+                )
             except Exception as e:
                 errors.append(e)
         if errors:
             raise ExceptionGroup("Migration apply errors", errors)
+
+        return processed_files
 
 
 def migrate(upgrades: list[dict[str, Any]], migration_resolver: type["Resolver"]) -> None:

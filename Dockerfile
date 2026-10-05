@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi10/python-312-minimal:10.2-1790644337@sha256:10aec0f5767b99a60e9de0c11f017ed9e85c22381f231dcb5aa179e687d2b17e AS base
+FROM registry.access.redhat.com/ubi10/python-312-minimal:10.2-1791159829@sha256:81334cc892f928237b46a98e36842ca090a5b212c6a56cb8d0d4dc4b6b014ed1 AS base
 USER root
 COPY requirements.txt requirements-build.txt ./
 RUN python3.12 -m venv /venv && \
@@ -7,7 +7,7 @@ RUN python3.12 -m venv /venv && \
 COPY . .
 RUN /venv/bin/pip install --no-cache-dir .
 
-FROM registry.access.redhat.com/ubi10/python-312-minimal:10.2-1790644337@sha256:10aec0f5767b99a60e9de0c11f017ed9e85c22381f231dcb5aa179e687d2b17e
+FROM registry.access.redhat.com/ubi10/python-312-minimal:10.2-1791159829@sha256:81334cc892f928237b46a98e36842ca090a5b212c6a56cb8d0d4dc4b6b014ed1
 LABEL maintainer="Red Hat"
 LABEL io.k8s.display-name="pipeline-migration-tool"
 LABEL io.openshift.tags="konflux, pipeline-migration-tool, cli"

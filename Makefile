@@ -11,7 +11,8 @@ define uv-pip-compile
 			pip install uv && \
 			uv pip compile --generate-hashes --output-file=requirements.txt --python=3.12 $(1) pyproject.toml && \
 			uv pip compile --extra=test --generate-hashes --output-file=requirements-test.txt --python=3.12 $(1) pyproject.toml && \
-			uv pip compile --generate-hashes --output-file=requirements-build.txt --python=3.12 $(1) requirements-build.in \
+			uv pip compile --generate-hashes --output-file=requirements-build.txt --python=3.12 $(1) requirements-build.in && \
+			uv pip compile --generate-hashes --allow-unsafe --output-file=requirements-extras.txt --python=3.12 $(1) requirements-extras.in \
 		'
 endef
 

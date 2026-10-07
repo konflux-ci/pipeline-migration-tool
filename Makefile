@@ -1,22 +1,27 @@
-define compile_deps
-	pip-compile --generate-hashes $(1) --output-file=requirements.txt pyproject.toml
-	pip-compile --extra=test --generate-hashes $(1) --output-file=requirements-test.txt pyproject.toml
-	pip-compile --allow-unsafe --generate-hashes $(1) --output-file=requirements-build.txt requirements-build.in
-	# Period is converted to dash during pip-compile. This is a workaround by reverting it back
-	# so that Renovate can include the updates correctly for ruamel.yaml package.
-	for req_file in requirements.txt requirements-test.txt; do \
-		sed -i "s/ruamel-yaml-clib/ruamel.yaml.clib/" $$req_file; \
-		sed -i "s/ruamel-yaml/ruamel.yaml/" $$req_file; \
-	done
+PYTHON_IMAGE := mirror.gcr.io/library/python:3.12-alpine
+CONTAINER_WORKDIR := /pmt
+
+# NOTE: $(1) is forwarded to uv (e.g. --upgrade)
+define uv-pip-compile
+	podman run --rm \
+		--volume "$(CURDIR):$(CONTAINER_WORKDIR):rw,Z" \
+		--workdir "$(CONTAINER_WORKDIR)" \
+		$(PYTHON_IMAGE) \
+		sh -c ' \
+			pip install uv && \
+			uv pip compile --generate-hashes --output-file=requirements.txt --python=3.12 $(1) pyproject.toml && \
+			uv pip compile --extra=test --generate-hashes --output-file=requirements-test.txt --python=3.12 $(1) pyproject.toml && \
+			uv pip compile --generate-hashes --output-file=requirements-build.txt --python=3.12 $(1) requirements-build.in \
+		'
 endef
 
 .PHONY: deps/compile deps/upgrade
 
 deps/compile:
-	$(call compile_deps)
+	$(call uv-pip-compile)
 
 deps/upgrade:
-	$(call compile_deps,--upgrade)
+	$(call uv-pip-compile, --upgrade)
 
 
 .PHONY: venv/create venv/remove venv/recreate

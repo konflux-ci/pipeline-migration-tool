@@ -370,16 +370,8 @@ start:
 
 * Create a virtual environment: `make venv/create`
 * Re-create the virtual environment: `make venv/recreate`
-* Update requirements after adding dependencies:
-  ```bash
-  source .venv/bin/activate
-  make deps/compile
-  ```
-* Upgrade dependencies:
-  ```bash
-  source .venv/bin/activate
-  make deps/upgrade
-  ```
+* Update requirements after adding dependencies: `make deps/compile`
+* Upgrade dependencies: `make deps/upgrade`
 
 > [!NOTE]
 > If you create a virtual environment by yourself, please ensure create it with

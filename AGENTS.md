@@ -16,7 +16,6 @@ source .venv/bin/activate
 To update dependencies after changes to `pyproject.toml`:
 
 ```bash
-source .venv/bin/activate
 make deps/compile
 ```
 

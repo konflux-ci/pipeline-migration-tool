@@ -1,0 +1,2 @@
+build==1.6.1                        # invoked directly: hack/build_release_artifacts.py runs `python3 -m build`
+setuptools==84.0.0                  # dependency of hack/build_release_artifacts.py

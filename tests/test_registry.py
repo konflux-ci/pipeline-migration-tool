@@ -1,15 +1,20 @@
 import copy
+from unittest.mock import patch
+
 import pytest
+import requests
 import responses
 
 from tests.utils import generate_digest
 from pipeline_migration.registry import (
     Container,
     Descriptor,
+    HTTP_TIMEOUT,
     ImageIndex,
     MEDIA_TYPE_OCI_IMAGE_INDEX_V1,
     MEDIA_TYPE_OCI_IMAGE_MANIFEST_V1,
     Registry,
+    TimeoutHTTPAdapter,
 )
 from pipeline_migration.types import DescriptorT, ImageIndexT
 
@@ -136,3 +141,27 @@ def test_get_artifact():
     responses.get(f"https://{c.get_blob_url(image_digest)}", body=expected_content.encode("utf-8"))
     content = Registry().get_artifact(c, image_digest)
     assert content == expected_content
+
+
+@pytest.mark.parametrize(
+    "timeout,expected",
+    [(None, HTTP_TIMEOUT), (10, 10)],
+)
+def test_timeout_http_adapter(timeout, expected):
+    request = requests.Request("GET", "https://reg.io/v2/").prepare()
+    with patch("requests.adapters.HTTPAdapter.send") as mock_send:
+        TimeoutHTTPAdapter().send(request, timeout=timeout)
+    assert mock_send.call_args.kwargs["timeout"] == expected
+
+
+@pytest.mark.parametrize("url", ["https://reg.io/v2/", "http://reg.io/v2/"])
+def test_registry_session_uses_timeout_adapter(url):
+    assert isinstance(Registry().session.get_adapter(url), TimeoutHTTPAdapter)
+
+
+@responses.activate
+def test_registry_request_has_timeout(image_manifest):
+    c = Container(f"reg.io/ns/app@{generate_digest()}")
+    responses.get(f"https://{c.manifest_url()}", json=image_manifest)
+    Registry().get_manifest(c)
+    assert responses.calls[0].request.req_kwargs["timeout"] == HTTP_TIMEOUT

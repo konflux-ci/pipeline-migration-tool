@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Any, Final
 import urllib.parse
 
 from dataclasses import dataclass
@@ -7,11 +7,16 @@ from oras.provider import Registry as OrasRegistry
 from oras.container import Container as OrasContainer
 from oras.decorator import ensure_container
 from oras.types import container_type
-from requests.models import Response
+from requests.adapters import HTTPAdapter
+from requests.models import PreparedRequest, Response
 
 from pipeline_migration.types import AnnotationsT, ImageIndexT, DescriptorT
 
 REGISTRY: Final = "quay.io"
+
+# (connect, read) timeout in seconds for HTTP requests sent to registries and Quay API
+# read means: once connected, timeout between read bytes
+HTTP_TIMEOUT: Final = (10, 30)
 
 MEDIA_TYPE_OCI_EMTPY_V1: Final = "application/vnd.oci.empty.v1+json"
 MEDIA_TYPE_OCI_IMAGE_CONFIG_V1: Final = "application/vnd.oci.image.config.v1+json"
@@ -71,8 +76,35 @@ class Container(OrasContainer):
         return uri
 
 
+class TimeoutHTTPAdapter(HTTPAdapter):
+    """HTTP adapter applying HTTP_TIMEOUT to requests that do not set a timeout explicitly."""
+
+    def send(
+        self,
+        request: PreparedRequest,
+        stream: bool = False,
+        timeout: Any = None,
+        verify: Any = True,
+        cert: Any = None,
+        proxies: Any = None,
+    ) -> Response:
+        if timeout is None:
+            timeout = HTTP_TIMEOUT
+        return super().send(
+            request, stream=stream, timeout=timeout, verify=verify, cert=cert, proxies=proxies
+        )
+
+
 class Registry(OrasRegistry):
     """OCI registry client with blob fetching, artifact retrieval, and referrers support."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        # oras does not pass a timeout to requests. Mount the adapter on the session shared with
+        # the auth backend, so every request including token fetching is bounded.
+        adapter = TimeoutHTTPAdapter()
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     @ensure_container
     def get_blob(self, *args, **kwargs) -> Response:

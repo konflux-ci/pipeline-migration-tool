@@ -1,6 +1,8 @@
+import pytest
+import requests
 import responses
 
-from pipeline_migration.registry import Container
+from pipeline_migration.registry import HTTP_TIMEOUT, Container
 from pipeline_migration.quay import list_active_repo_tags
 
 
@@ -41,3 +43,23 @@ class TestListActiveRepoTags:
         expected = tags_page_1[:]
         expected.extend(tags_page_2)
         assert list(got) == expected
+
+    @responses.activate
+    def test_request_has_timeout(self):
+        responses.get(
+            "https://quay.io/api/v1/repository/ns/app/tag/?page=1&onlyActiveTags=true",
+            json={"tags": [], "page": 1, "has_additional": False},
+        )
+
+        list(list_active_repo_tags(Container("quay.io/ns/app")))
+        assert responses.calls[0].request.req_kwargs["timeout"] == HTTP_TIMEOUT
+
+    @responses.activate
+    def test_raise_timeout_error(self):
+        responses.get(
+            "https://quay.io/api/v1/repository/ns/app/tag/?page=1&onlyActiveTags=true",
+            body=requests.exceptions.ReadTimeout("read timed out"),
+        )
+
+        with pytest.raises(requests.exceptions.ReadTimeout):
+            list(list_active_repo_tags(Container("quay.io/ns/app")))

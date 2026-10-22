@@ -4,7 +4,7 @@ from typing import Any
 
 import requests
 
-from pipeline_migration.registry import Container
+from pipeline_migration.registry import HTTP_TIMEOUT, Container
 
 
 @dataclass
@@ -45,7 +45,7 @@ def list_active_repo_tags(
         if per_page > 0:
             params["limit"] = str(per_page)
         api_url = f"https://{c.registry}/api/v1/repository/{c.namespace}/{c.repository}/tag/"
-        resp = requests.get(api_url, params=params)
+        resp = requests.get(api_url, params=params, timeout=HTTP_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
         yield from data["tags"]

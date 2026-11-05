@@ -1,11 +1,12 @@
 import argparse
+import logging
 import shutil
 from pathlib import Path
 
 import pytest
 import responses
 
-from pipeline_migration.api_version import ENV_API_VERSION, ApiVersion
+from pipeline_migration.api_version import ENV_API_VERSION, ENV_IN_MIGRATION, ApiVersion
 from pipeline_migration.actions.modify.task import subcmd_description
 from pipeline_migration.cli import build_parser, entry_point
 from tests.actions.test_add_task_cli import (
@@ -51,6 +52,46 @@ def test_default_to_api_v1(monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "{migrate,add-task,modify,format}" in out
     assert "API version 1" in out
+
+
+@pytest.mark.parametrize(
+    "api_version,expected",
+    [
+        pytest.param(None, "Using CLI API version 1 (default)", id="default"),
+        pytest.param("1", "Using CLI API version 1 (set by PMT_API_VERSION)", id="v1"),
+        pytest.param("2", "Using CLI API version 2 (set by PMT_API_VERSION)", id="v2"),
+    ],
+)
+def test_log_api_version(api_version, expected, monkeypatch, caplog, tmp_path):
+    monkeypatch.delenv(ENV_IN_MIGRATION, raising=False)
+    if api_version is None:
+        monkeypatch.delenv(ENV_API_VERSION, raising=False)
+    else:
+        monkeypatch.setenv(ENV_API_VERSION, api_version)
+    monkeypatch.setattr("sys.argv", ["pmt", "format", str(tmp_path)])
+    caplog.set_level(logging.INFO)
+    entry_point()
+    assert caplog.text.count("Using CLI API version") == 1
+    assert expected in caplog.text
+
+
+def test_do_not_log_api_version_inside_migration_script(monkeypatch, caplog, tmp_path):
+    monkeypatch.setenv(ENV_IN_MIGRATION, "1")
+    monkeypatch.setenv(ENV_API_VERSION, "2")
+    monkeypatch.setattr("sys.argv", ["pmt", "format", str(tmp_path)])
+    caplog.set_level(logging.INFO)
+    entry_point()
+    assert "Using CLI API version" not in caplog.text
+
+
+def test_do_not_log_api_version_of_migrate(monkeypatch, caplog, tmp_path):
+    monkeypatch.delenv(ENV_IN_MIGRATION, raising=False)
+    upgrades_file = tmp_path / "upgrades.json"
+    upgrades_file.write_text("[]")
+    monkeypatch.setattr("sys.argv", ["pmt", "migrate", "-f", str(upgrades_file)])
+    caplog.set_level(logging.INFO)
+    entry_point()
+    assert "Using CLI API version" not in caplog.text
 
 
 def test_reject_unsupported_api_version(monkeypatch, capsys):

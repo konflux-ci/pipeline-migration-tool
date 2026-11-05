@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 
 from pipeline_migration import __version__
 from pipeline_migration.actions.add_task import register_cli as register_add_task_cli
@@ -7,12 +8,15 @@ from pipeline_migration.actions.modify import register_cli as register_modify_cl
 from pipeline_migration.actions.modify.generic import register_cli_v2 as register_generic_cli_v2
 from pipeline_migration.actions.modify.pipeline import register_cli_v2 as register_pipeline_cli_v2
 from pipeline_migration.actions.modify.task import register_cli_v2 as register_task_cli_v2
+from pipeline_migration.actions.migrate.cli import action as migrate_action
 from pipeline_migration.actions.migrate.cli import register_cli as register_migrate_cli
 from pipeline_migration.actions.format import register_cli as register_format_cli
 from pipeline_migration.api_version import (
     ENV_API_VERSION,
+    ENV_IN_MIGRATION,
     ApiVersion,
     UnsupportedApiVersion,
+    api_version_source,
     get_api_version,
 )
 
@@ -49,8 +53,11 @@ def main() -> None:
         api_version = get_api_version()
     except UnsupportedApiVersion as e:
         build_parser(ApiVersion.V1).error(str(e))
-    logger.debug("Using CLI API version %s", api_version)
     args = build_parser(api_version).parse_args()
+    # migrate works the same in every API version and logs the version of each migration script
+    # it runs, so pmt invocations inside those scripts do not log it again.
+    if args.action is not migrate_action and not os.environ.get(ENV_IN_MIGRATION):
+        logger.info("Using CLI API version %s (%s)", api_version, api_version_source())
     args.action(args)
 
 

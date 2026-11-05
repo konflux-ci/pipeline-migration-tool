@@ -366,6 +366,52 @@ start:
   - item: test
 ```
 
+### Command structure API versions
+
+`pmt` supports two command structures, selected by the environment variable `PMT_API_VERSION`.
+The sections above describe API version 1, which is the default, so already released migration
+scripts keep working unchanged.
+
+API version 2 groups operations by the resource they modify:
+
+| API version 1 | API version 2 |
+|---|---|
+| `pmt add-task BUNDLE [FILE...]` | `pmt task [-f FILE] add BUNDLE` |
+| `pmt add-task BUNDLE -f` | `pmt task add BUNDLE --finally` |
+| `pmt modify -f F task N add-param P V` | `pmt task -f F N add-param P V` |
+| `pmt modify -f F task N remove-param P` | `pmt task -f F N remove-param P` |
+| `pmt modify -f F task N matrix-add-param P V` | `pmt task -f F N add-matrix-param P V` |
+| `pmt modify -f F task N matrix-remove-param P` | `pmt task -f F N remove-matrix-param P` |
+| `pmt modify -f F task N rename NEW` | `pmt task -f F N rename NEW` |
+| `pmt modify -f F task N set-bundle B` | `pmt task -f F N set-bundle B` |
+| `pmt modify -f F pipeline OPERATION ...` | `pmt pipeline -f F OPERATION ...` |
+| `pmt modify -f F generic OPERATION ...` | `pmt generic -f F OPERATION ...` |
+
+`-f`/`--file` and `--dry-run` are options of `task`, `pipeline` and `generic`, so they precede
+the task name and the operation. Operation names (`add`, `rename`, ...) are reserved and cannot
+be used as task names. `migrate` and `format` are the same in both versions.
+
+A migration script opts into API version 2 by setting the variable in its own process:
+
+```bash
+#!/usr/bin/env bash
+pipeline=$1
+export PMT_API_VERSION=2
+pmt task -f "$pipeline" clone add-param git-url "https://github.com/org/app"
+```
+
+The choice applies only to the script that sets it. `pmt migrate` runs every migration script
+with `PMT_API_VERSION=1`, overriding any value set in its own environment, so a script that does
+not set the variable always uses API version 1. Scripts using different API versions can be
+applied in the same `migrate` run (e.g. when an old script uses the default v1, but a new script
+can use v2).
+
+Declare the API version once, at the top of the script, with a literal value as shown above.
+`pmt migrate` reads the declaration from the script text and logs it before running the script,
+e.g. `(pmt API version 2)` or `(pmt API version 1, default)`. When `pmt` is run directly, e.g.
+`PMT_API_VERSION=2 pmt task ...` in a terminal, it logs the API version it uses and where it comes
+from: `Using CLI API version 2 (set by PMT_API_VERSION)`.
+
 ## Development environment management
 
 * Create a virtual environment: `make venv/create`

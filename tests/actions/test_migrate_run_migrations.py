@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import os.path
+import re
 from textwrap import dedent, indent
 from collections.abc import Callable
 
@@ -9,6 +10,8 @@ import pytest
 import responses
 from ruamel.yaml import YAML
 
+from pipeline_migration.actions.migrate.models import TaskBundleMigration
+from pipeline_migration.api_version import ENV_API_VERSION
 from pipeline_migration.cli import entry_point
 from pipeline_migration.pipeline import TEKTON_KIND_PIPELINE, TEKTON_KIND_PIPELINE_RUN
 from tests.actions.test_migrate import TASK_BUNDLE_CLONE
@@ -37,6 +40,20 @@ MIGRATION_0_3_ADD_PARAM = """\
 #!/usr/bin/env bash
 pipeline=$1
 pmt modify -f "$pipeline" task clone add-param revision 1234567
+"""
+
+
+MIGRATION_0_2_1_ADD_PARAM_V2 = """\
+#!/usr/bin/env bash
+pipeline=$1
+export PMT_API_VERSION=2
+pmt task -f "$pipeline" clone add-param git-url "https://github.com/org/app"
+"""
+
+MIGRATION_0_3_ADD_PARAM_V2 = """\
+#!/usr/bin/env bash
+pipeline=$1
+PMT_API_VERSION=2 pmt task -f "$pipeline" clone add-param revision 1234567
 """
 
 
@@ -121,6 +138,8 @@ def ensure_pipeline_param_git_url_is_removed(modified_pipeline_content: str):
 
 
 @responses.activate
+# The API version of pmt migrate never changes the API version of migration scripts
+@pytest.mark.parametrize("inherited_api_version", [None, "2"])
 @pytest.mark.parametrize(
     "migration_scripts,assertion_methods",
     [
@@ -128,6 +147,17 @@ def ensure_pipeline_param_git_url_is_removed(modified_pipeline_content: str):
             [MIGRATION_0_2_1_ADD_PARAM, MIGRATION_0_3_ADD_PARAM],
             [ensure_params_are_added],
             id="migration-by-task-add-param",
+        ),
+        pytest.param(
+            [MIGRATION_0_2_1_ADD_PARAM_V2, MIGRATION_0_3_ADD_PARAM_V2],
+            [ensure_params_are_added],
+            id="migration-by-task-add-param-api-v2",
+        ),
+        pytest.param(
+            # Older migrations use API v1, newer ones opt into API v2, in the same migrate run
+            [MIGRATION_0_2_1_ADD_PARAM, MIGRATION_0_3_ADD_PARAM_V2],
+            [ensure_params_are_added],
+            id="migration-by-task-add-param-api-v1-then-v2",
         ),
         pytest.param(
             [MIGRATION_0_2_1_GENERIC_INSERT, MIGRATION_0_3_GENERIC_REMOVE],
@@ -139,6 +169,7 @@ def ensure_pipeline_param_git_url_is_removed(modified_pipeline_content: str):
 def test_apply_migration(
     migration_scripts: list[str],
     assertion_methods: list[Callable[[str], None]],
+    inherited_api_version: str | None,
     caplog,
     monkeypatch,
     tmp_path,
@@ -191,6 +222,11 @@ def test_apply_migration(
         migration_scripts=prepared_migration_scripts,
     )
 
+    if inherited_api_version is None:
+        monkeypatch.delenv(ENV_API_VERSION, raising=False)
+    else:
+        monkeypatch.setenv(ENV_API_VERSION, inherited_api_version)
+
     cli_cmd = ["pmt", "migrate", "-f", str(upgrades_file)]
     monkeypatch.setattr("sys.argv", cli_cmd)
 
@@ -198,3 +234,12 @@ def test_apply_migration(
 
     for method in assertion_methods:
         method(package_file.read_text())
+
+    # Version of each script is logged once by migrate, never by pmt itself (neither by migrate,
+    # nor by the pmt commands inside the scripts, whose output is logged by migrate)
+    assert "Using CLI API version" not in caplog.text
+    expected_versions = [
+        TaskBundleMigration("", script).api_version_description for script in migration_scripts
+    ]
+    logged_versions = re.findall(r"\(pmt API version ([^)]+)\)", caplog.text)
+    assert logged_versions == expected_versions

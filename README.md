@@ -391,6 +391,21 @@ API version 2 groups operations by the resource they modify:
 the task name and the operation. Operation names (`add`, `rename`, ...) are reserved and cannot
 be used as task names. `migrate` and `format` are the same in both versions.
 
+A migration script opts into API version 2 by setting the variable in its own process:
+
+```bash
+#!/usr/bin/env bash
+pipeline=$1
+export PMT_API_VERSION=2
+pmt task -f "$pipeline" clone add-param git-url "https://github.com/org/app"
+```
+
+The choice applies only to the script that sets it. `pmt migrate` runs every migration script
+with `PMT_API_VERSION=1`, overriding any value set in its own environment, so a script that does
+not set the variable always uses API version 1. Scripts using different API versions can be
+applied in the same `migrate` run (e.g. when an old script uses the default v1, but a new script
+can use v2).
+
 ## Development environment management
 
 * Create a virtual environment: `make venv/create`

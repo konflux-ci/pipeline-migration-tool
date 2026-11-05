@@ -30,6 +30,7 @@ from pipeline_migration.actions.migrate.models import PackageFile, TaskBundleUpg
 from pipeline_migration.actions.migrate.resolvers import Resolver
 from pipeline_migration.actions.migrate.resolvers.migration_images import MigrationImageTag
 
+from pipeline_migration.api_version import ENV_API_VERSION, MIGRATION_API_VERSION
 from pipeline_migration.quay import list_active_repo_tags
 from pipeline_migration.registry import REGISTRY, Container, ImageIndex, Registry
 from pipeline_migration.pipeline import NotAPipelineFile, PipelineFileOperation
@@ -54,6 +55,9 @@ class MigrationFileOperation(PipelineFileOperation):
             raised as a group at once. Every raw exception is wrapped inside MigrationApplyError.
         """
         fd, migration_file = tempfile.mkstemp(suffix="-migration-file")
+        # A script that does not choose an API version gets the one of migration scripts, even if
+        # pmt migrate itself inherited another one (e.g. from Mintmaker or a user).
+        migration_env = {**os.environ, ENV_API_VERSION: str(MIGRATION_API_VERSION)}
         prev_size = 0
         errors: list[Exception] = []
 
@@ -72,9 +76,9 @@ class MigrationFileOperation(PipelineFileOperation):
                         os.truncate(fd, len(content))
                     prev_size = os.write(fd, content)
 
-                    cmd = ["bash", migration_file, file_path]
+                    cmd = ["bash", migration_file, str(file_path)]
                     logger.debug("Run: %r", cmd)
-                    proc = sp.run(cmd, stderr=sp.STDOUT, stdout=sp.PIPE)
+                    proc = sp.run(cmd, stderr=sp.STDOUT, stdout=sp.PIPE, env=migration_env)
                     logger.debug("%r", proc.stdout)
                     proc.check_returncode()
                 except Exception as e:

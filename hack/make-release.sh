@@ -39,8 +39,8 @@ make_release_for_review() {
         git pull
     fi
     git checkout -b "release-${new_version}"
-    sed -i "s/^__version__ = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"$/__version__ = \"${new_version}\"/" src/pipeline_migration/__init__.py
-    git add src/pipeline_migration/__init__.py
+    printf '%s\n' "$new_version" > VERSION
+    git add VERSION
     commit_opts=(-s -m "Release ${new_version}")
     if [[ -n "$issue_key" ]]; then
         commit_opts+=(-m "$issue_key")

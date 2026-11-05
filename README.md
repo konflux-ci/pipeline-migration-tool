@@ -406,6 +406,12 @@ not set the variable always uses API version 1. Scripts using different API vers
 applied in the same `migrate` run (e.g. when an old script uses the default v1, but a new script
 can use v2).
 
+Declare the API version once, at the top of the script, with a literal value as shown above.
+`pmt migrate` reads the declaration from the script text and logs it before running the script,
+e.g. `(pmt API version 2)` or `(pmt API version 1, default)`. When `pmt` is run directly, e.g.
+`PMT_API_VERSION=2 pmt task ...` in a terminal, it logs the API version it uses and where it comes
+from: `Using CLI API version 2 (set by PMT_API_VERSION)`.
+
 ## Development environment management
 
 * Create a virtual environment: `make venv/create`

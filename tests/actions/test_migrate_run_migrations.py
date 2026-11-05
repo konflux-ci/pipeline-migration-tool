@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import os.path
+import re
 from textwrap import dedent, indent
 from collections.abc import Callable
 
@@ -9,6 +10,7 @@ import pytest
 import responses
 from ruamel.yaml import YAML
 
+from pipeline_migration.actions.migrate.models import TaskBundleMigration
 from pipeline_migration.api_version import ENV_API_VERSION
 from pipeline_migration.cli import entry_point
 from pipeline_migration.pipeline import TEKTON_KIND_PIPELINE, TEKTON_KIND_PIPELINE_RUN
@@ -232,3 +234,12 @@ def test_apply_migration(
 
     for method in assertion_methods:
         method(package_file.read_text())
+
+    # Version of each script is logged once by migrate, never by pmt itself (neither by migrate,
+    # nor by the pmt commands inside the scripts, whose output is logged by migrate)
+    assert "Using CLI API version" not in caplog.text
+    expected_versions = [
+        TaskBundleMigration("", script).api_version_description for script in migration_scripts
+    ]
+    logged_versions = re.findall(r"\(pmt API version ([^)]+)\)", caplog.text)
+    assert logged_versions == expected_versions

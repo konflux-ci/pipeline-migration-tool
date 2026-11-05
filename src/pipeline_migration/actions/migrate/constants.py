@@ -77,3 +77,13 @@ REGEX_PMT_MODIFY_USAGE = re.compile(
     r"(modify|add-task|task|pipeline|generic)\s",
     re.MULTILINE,
 )
+
+# Match the API version a migration script declares, e.g. at the top of the script:
+#   export PMT_API_VERSION=2
+# or as a prefix of a pmt command:
+#   PMT_API_VERSION=2 pmt task ...
+# The value must be a literal number, optionally quoted.
+REGEX_PMT_API_VERSION = re.compile(
+    r"^\s*(?:export\s+|env\s+)?(?:\w+=\S*\s+)*PMT_API_VERSION=[\"']?(\d+)[\"']?(?=[\s;]|$)",
+    re.MULTILINE,
+)

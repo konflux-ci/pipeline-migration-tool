@@ -30,7 +30,11 @@ from pipeline_migration.actions.migrate.models import PackageFile, TaskBundleUpg
 from pipeline_migration.actions.migrate.resolvers import Resolver
 from pipeline_migration.actions.migrate.resolvers.migration_images import MigrationImageTag
 
-from pipeline_migration.api_version import ENV_API_VERSION, MIGRATION_API_VERSION
+from pipeline_migration.api_version import (
+    ENV_API_VERSION,
+    ENV_IN_MIGRATION,
+    MIGRATION_API_VERSION,
+)
 from pipeline_migration.quay import list_active_repo_tags
 from pipeline_migration.registry import REGISTRY, Container, ImageIndex, Registry
 from pipeline_migration.pipeline import NotAPipelineFile, PipelineFileOperation
@@ -57,7 +61,12 @@ class MigrationFileOperation(PipelineFileOperation):
         fd, migration_file = tempfile.mkstemp(suffix="-migration-file")
         # A script that does not choose an API version gets the one of migration scripts, even if
         # pmt migrate itself inherited another one (e.g. from Mintmaker or a user).
-        migration_env = {**os.environ, ENV_API_VERSION: str(MIGRATION_API_VERSION)}
+        # pmt invocations inside the script do not log their API version, it is logged below.
+        migration_env = {
+            **os.environ,
+            ENV_API_VERSION: str(MIGRATION_API_VERSION),
+            ENV_IN_MIGRATION: "1",
+        }
         prev_size = 0
         errors: list[Exception] = []
 
@@ -65,9 +74,10 @@ class MigrationFileOperation(PipelineFileOperation):
             for migration in bundle_upgrade.migrations:
                 try:
                     logger.info(
-                        "Apply migration of task bundle %s in package file %s",
+                        "Apply migration of task bundle %s in package file %s (pmt API version %s)",
                         migration.task_bundle,
                         file_path,
+                        migration.api_version_description,
                     )
 
                     os.lseek(fd, 0, 0)

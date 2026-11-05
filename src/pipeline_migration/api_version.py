@@ -5,6 +5,10 @@ from typing import Final
 
 ENV_API_VERSION: Final = "PMT_API_VERSION"
 
+# Set by pmt migrate in the environment of migration scripts. pmt invocations inside a script skip
+# logging their API version, because pmt migrate already logged the version the script declares.
+ENV_IN_MIGRATION: Final = "PMT_IN_MIGRATION"
+
 
 class ApiVersion(IntEnum):
     """Supported versions of the pmt command structure."""
@@ -43,3 +47,8 @@ def get_api_version(environ: Mapping[str, str] = os.environ) -> ApiVersion:
             f"{ENV_API_VERSION}={value!r} is not supported by this pmt release. "
             f"Supported API versions: {supported}."
         ) from None
+
+
+def api_version_source(environ: Mapping[str, str] = os.environ) -> str:
+    """Describe where the API version comes from, for logging."""
+    return f"set by {ENV_API_VERSION}" if environ.get(ENV_API_VERSION, "").strip() else "default"

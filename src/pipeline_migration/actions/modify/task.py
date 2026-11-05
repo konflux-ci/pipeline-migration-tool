@@ -10,63 +10,100 @@ from pipeline_migration.yamleditor import EditYAMLEntry, YAMLPath
 from pipeline_migration.types import FilePath
 from pipeline_migration.utils import YAMLStyle, load_yaml
 from pipeline_migration.pipeline import PipelineFileOperation
-from pipeline_migration.actions.add_task import get_task_bundle_reference
-from pipeline_migration.actions.modify.common import run_modify
+from pipeline_migration.actions.add_task import (
+    ADD_TASK_HELP,
+    ADD_TO_FINALLY_HELP,
+    add_task_arguments,
+    build_operation as build_add_task_operation,
+    get_task_bundle_reference,
+)
+from pipeline_migration.api_version import ApiVersion
 from pipeline_migration.actions.modify.common import (
     ParamType,
+    add_target_arguments,
     get_nested,
+    render_description,
+    run_modify,
 )
 
 logger = logging.getLogger("modify.task")
 
 
-SUBCMD_DESCRIPTION: Final = """\
-The following are several examples with a Konflux task push-dockerfile:
-
+# Description shared by all API versions, see subcmd_description(). Operations are named as in
+# API v1. The placeholders listed in _DESCRIPTION_PARTS_V2 mark the parts present only in API v2.
+SUBCMD_DESCRIPTION_TEMPLATE: Final = """\
+{{usage}}The following are several examples with a Konflux task push-dockerfile:
+{{add-task}}
 * Modify a task within relative .tekton/ directory.
 
     cd /path/to/repo
-    pmt modify task push-dockerfile add-param new-param new-value
+    {{pmt}} push-dockerfile add-param new-param new-value
 
 * Modify task in multiple pipelines in several repositories:
 
-    pmt modify \\
-        -f /path/to/repo1/.tekton/pr.yaml -f /path/to/repo2/.tekton/push.yaml \\
-        task push-dockerfile \\
-        add-param new-param new-value
+    {{pmt -f /path/to/repo1/.tekton/pr.yaml -f /path/to/repo2/.tekton/push.yaml}} \\
+        push-dockerfile add-param new-param new-value
 
 * Add array of values.
 
     cd /path/to/repo
-    pmt modify task push-dockerfile add-param -t array new-param new-value1 new-value2
+    {{pmt}} push-dockerfile add-param -t array new-param new-value1 new-value2
 
     Note: if the param name exist current values will be replaced, not appended
 
 * Rename a task:
 
-    pmt modify task clair-scan rename roxctl-scan
+    {{pmt}} clair-scan rename roxctl-scan
 
 * Rename a task and update the taskRef resolver name param:
 
-    pmt modify task clair-scan rename roxctl-scan --task-ref-name task-roxctl-scan
+    {{pmt}} clair-scan rename roxctl-scan --task-ref-name task-roxctl-scan
 
 * Set the bundle for a task:
 
-    pmt modify task buildah set-bundle quay.io/org/task-buildah:0.2@sha256:abc123
+    {{pmt}} buildah set-bundle quay.io/org/task-buildah:0.2@sha256:abc123
 
 * Set the bundle and update the taskRef resolver name param:
 
-    pmt modify task buildah set-bundle quay.io/org/task-buildah:0.2@sha256:abc123 \\
+    {{pmt}} buildah set-bundle quay.io/org/task-buildah:0.2@sha256:abc123 \\
         --task-ref-name task-buildah
 
-* Supported task modifications:
-   - add-param: adds a new param to the task (or updates existing)
+* Show the changes without modifying the files:
+
+    {{pmt --dry-run}} push-dockerfile remove-param old-param
+
+* Supported task operations:
+{{add-task-op}}   - add-param: adds a new param to the task (or updates existing)
    - remove-param: removes the specified param from the task
    - matrix-add-param: adds a new matrix param to the task (or updates existing)
    - matrix-remove-param: removes the specified matrix param from the task
    - rename: renames the task in the pipeline
    - set-bundle: sets the bundle in the taskRef resolver params
-"""
+{{reserved}}"""
+
+# Parts of the description present only in API v2, which adds tasks by "pmt task add"
+_DESCRIPTION_PARTS_V2: Final = {
+    "{{usage}}": """\
+Usage patterns:
+
+    pmt task [-f FILE] [--dry-run] TASK-NAME OPERATION [args...]
+    pmt task [-f FILE] [--dry-run] add BUNDLE-REF [options]
+
+""",
+    "{{add-task}}": """
+* Add a task to pipelines within relative .tekton/ directory:
+
+    cd /path/to/repo
+    pmt task add quay.io/konflux-ci/konflux-vanguard/task-push-dockerfile:0.1 \\
+        --run-after build-image-index
+""",
+    "{{add-task-op}}": """\
+   - add: adds a new task to the pipeline from a bundle reference (takes no TASK-NAME)
+""",
+    "{{reserved}}": """
+Operation names are reserved and cannot be used as TASK-NAME.
+""",
+}
 
 
 class TaskNotFoundError(Exception):
@@ -169,23 +206,155 @@ class TaskBase(PipelineFileOperation):
             )
 
 
+TASK_NAME_HELP: Final = "Pipeline task name in pipeline/pipeline run YAML file."
+
+# Operations named differently in each API version: API v1 name -> API v2 name
+_RENAMED_OPERATIONS_V2: Final = {
+    "matrix-add-param": "add-matrix-param",
+    "matrix-remove-param": "remove-matrix-param",
+}
+
+# API v2 operations which do not target an existing task, hence take no TASK-NAME
+_OPERATIONS_WITHOUT_TARGET_V2: Final = frozenset({"add"})
+
+
+def subcmd_description(api_version: ApiVersion) -> str:
+    """Return the description of the 'task' subcommand in the given API version."""
+    description = render_description(SUBCMD_DESCRIPTION_TEMPLATE, "task", api_version)
+    for placeholder, text in _DESCRIPTION_PARTS_V2.items():
+        description = description.replace(placeholder, text if api_version >= ApiVersion.V2 else "")
+    if api_version >= ApiVersion.V2:
+        for v1_name, v2_name in _RENAMED_OPERATIONS_V2.items():
+            description = description.replace(v1_name, v2_name)
+    return description
+
+
 def register_cli(subparser) -> None:
-    """Register the 'task' subcommand and its sub-actions on the CLI parser."""
+    """Register the 'task' subcommand (API v1, under 'modify') on the CLI parser."""
     mod_task_parser = subparser.add_parser(
         "task",
         help="Update the specified Konflux task",
-        description=SUBCMD_DESCRIPTION,
+        description=subcmd_description(ApiVersion.V1),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
-    mod_task_parser.add_argument(
-        "task_name",
-        metavar="TASK-NAME",
-        help="Pipeline task name in pipeline/pipeline run YAML file.",
-    )
+    mod_task_parser.add_argument("task_name", metavar="TASK-NAME", help=TASK_NAME_HELP)
     subparser_mod = mod_task_parser.add_subparsers(
         title="subcommands to modify task", required=True
     )
+    register_operations(subparser_mod, ApiVersion.V1)
+
+
+class _TaskOperationsAction(argparse._SubParsersAction):
+    """Dispatch to a task operation, optionally preceded by the targeted TASK-NAME.
+
+    argparse cannot combine an optional positional argument with subparsers: the positional
+    always consumes the first word, so ``pmt task add BUNDLE`` would treat ``add`` as the task
+    name. Instead, the subparsers action receives all remaining words and takes the first one as
+    the task name unless it is an operation name. Operation names are therefore reserved and
+    cannot be used as task names.
+    """
+
+    class _OperationOrTaskName:
+        """Choices accepting any word, as the first word may be a task name.
+
+        argparse checks the first word against the choices before calling the action. Unknown
+        operations are still rejected by the parent ``__call__``.
+        """
+
+        def __init__(self, operations: dict) -> None:
+            self._operations = operations
+
+        def __contains__(self, value: object) -> bool:
+            return True
+
+        def __iter__(self):
+            return iter(self._operations)
+
+    @property  # type: ignore[override]
+    def choices(self):
+        return self._OperationOrTaskName(self._name_parser_map)
+
+    @choices.setter
+    def choices(self, value) -> None:
+        # Set by the parent __init__ to the operations map, which is _name_parser_map
+        pass
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values[0] not in self._name_parser_map:
+            namespace.task_name, *values = values
+            if not values:
+                parser.error(f"missing an operation for task {namespace.task_name!r}")
+            self._check_operation(parser, namespace.task_name, values[0])
+
+        operation = values[0]
+        if operation in _OPERATIONS_WITHOUT_TARGET_V2:
+            if namespace.task_name is not None:
+                parser.error(f"operation {operation!r} does not accept TASK-NAME")
+        elif namespace.task_name is None:
+            parser.error(f"operation {operation!r} requires TASK-NAME")
+
+        super().__call__(parser, namespace, values, option_string)
+
+    def _check_operation(self, parser, task_name: str, word: str) -> None:
+        """Check the word following TASK-NAME is an operation, with a helpful error otherwise.
+
+        Without this check, a mistyped operation is taken as the task name and the next word is
+        reported as an unknown operation, e.g. ``add-parm p v`` reports ``p``.
+        """
+        if word in self._name_parser_map:
+            return
+        if word.startswith("-"):
+            parser.error(
+                f"option {word!r} must precede TASK-NAME {task_name!r}, "
+                f"e.g. pmt task {word} ... {task_name} OPERATION"
+            )
+        operations = ", ".join(self._name_parser_map)
+        parser.error(
+            f"no operation found in {f'{task_name} {word}'!r}. "
+            f"Expected [TASK-NAME] OPERATION, where OPERATION is one of: {operations}"
+        )
+
+
+def register_cli_v2(subparser) -> None:
+    """Register the top-level 'task' subcommand (API v2) on the CLI parser."""
+    task_parser = subparser.add_parser(
+        "task",
+        help="Add a task to pipelines or update an existing one",
+        description=subcmd_description(ApiVersion.V2),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_target_arguments(task_parser, "-f", "--file", metavar="FILE")
+    task_parser.set_defaults(task_name=None)
+    subparser_ops = task_parser.add_subparsers(
+        title="task operations",
+        description=f"TASK-NAME: {TASK_NAME_HELP} Required by all operations except 'add'.",
+        metavar="[TASK-NAME] OPERATION",
+        required=True,
+        action=_TaskOperationsAction,
+    )
+
+    # add
+    subparser_add = subparser_ops.add_parser("add", help=ADD_TASK_HELP)
+    add_task_arguments(subparser_add)
+    subparser_add.add_argument(
+        "--finally",
+        action="store_true",
+        dest="add_to_finally",
+        help=ADD_TO_FINALLY_HELP,
+    )
+    subparser_add.set_defaults(action=action_add_task)
+
+    register_operations(subparser_ops, ApiVersion.V2)
+
+
+def register_operations(subparser_mod, api_version: ApiVersion) -> None:
+    """Register the operations on an existing task, shared by all API versions."""
+
+    def operation_name(name: str) -> str:
+        if api_version == ApiVersion.V1:
+            return name
+        return _RENAMED_OPERATIONS_V2.get(name, name)
 
     # add-param
     subparser_add_param = subparser_mod.add_parser(
@@ -219,7 +388,7 @@ def register_cli(subparser) -> None:
 
     # matrix-add-param
     subparser_add_param = subparser_mod.add_parser(
-        "matrix-add-param",
+        operation_name("matrix-add-param"),
         help="Add the specified parameter to a task matrix. If parameter already exists, "
         "it updates the value.",
     )
@@ -240,7 +409,7 @@ def register_cli(subparser) -> None:
 
     # matrix-remove-param
     subparser_remove_param = subparser_mod.add_parser(
-        "matrix-remove-param",
+        operation_name("matrix-remove-param"),
         help="Remove the specified parameter from a task matrix.",
     )
     subparser_remove_param.add_argument("param_name", help="parameter name", metavar="PARAM-NAME")
@@ -388,6 +557,13 @@ class ModTaskAddParamOperation(TaskBase):
             raise TaskNotFoundError
 
         return False
+
+
+def action_add_task(args) -> None:
+    """CLI action handler to add a task to pipeline files (API v2)."""
+    # Files are not modified in dry-run mode, so there is nothing to add to the git index
+    op = build_add_task_operation(args, git_add=args.git_add and not args.dry_run)
+    run_modify(op, args)
 
 
 def action_add_param(args) -> None:

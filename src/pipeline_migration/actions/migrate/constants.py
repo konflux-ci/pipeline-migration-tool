@@ -65,10 +65,15 @@ MIGRATION_IMAGE_TAG_REGEX: Final = re.compile(
 
 MIGRATION_IMAGE_TAG_LIKE_PATTERN: Final = r"migration-%.%-%-%"
 
-# Match pipeline-migration-tool CLI.
+# Match pipeline-migration-tool CLI commands modifying pipelines with minimal diffs, i.e. through
+# the yamleditor module instead of regenerating the whole document (e.g. by "yq -i").
 # Line continuation is matched by [\s\\]+
-# Command name can be either pipeline-migration-tool or pmt.
+# Command name can be either pipeline-migration-tool or pmt, optionally preceded by environment
+# variable assignments, e.g. PMT_API_VERSION=2 pmt task ...
+# The subcommand is "modify" or "add-task" in API v1 and one of "task", "pipeline", "generic" in
+# API v2.
 REGEX_PMT_MODIFY_USAGE = re.compile(
-    r"^\s*(pipeline-migration-tool|pmt)[\s\\]+modify\s",
+    r"^\s*(?:\w+=\S*\s+)*(pipeline-migration-tool|pmt)[\s\\]+"
+    r"(modify|add-task|task|pipeline|generic)\s",
     re.MULTILINE,
 )

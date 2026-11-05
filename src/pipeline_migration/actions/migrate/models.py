@@ -15,7 +15,7 @@ class TaskBundleMigration:
 
     @cached_property
     def is_pmt_modify_used(self) -> bool:
-        """Check whether the migration script uses the pmt modify command."""
+        """Check whether the migration script uses pmt commands modifying pipelines."""
         return REGEX_PMT_MODIFY_USAGE.search(self.migration_script) is not None
 
 

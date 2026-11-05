@@ -366,6 +366,31 @@ start:
   - item: test
 ```
 
+### Command structure API versions
+
+`pmt` supports two command structures, selected by the environment variable `PMT_API_VERSION`.
+The sections above describe API version 1, which is the default, so already released migration
+scripts keep working unchanged.
+
+API version 2 groups operations by the resource they modify:
+
+| API version 1 | API version 2 |
+|---|---|
+| `pmt add-task BUNDLE [FILE...]` | `pmt task [-f FILE] add BUNDLE` |
+| `pmt add-task BUNDLE -f` | `pmt task add BUNDLE --finally` |
+| `pmt modify -f F task N add-param P V` | `pmt task -f F N add-param P V` |
+| `pmt modify -f F task N remove-param P` | `pmt task -f F N remove-param P` |
+| `pmt modify -f F task N matrix-add-param P V` | `pmt task -f F N add-matrix-param P V` |
+| `pmt modify -f F task N matrix-remove-param P` | `pmt task -f F N remove-matrix-param P` |
+| `pmt modify -f F task N rename NEW` | `pmt task -f F N rename NEW` |
+| `pmt modify -f F task N set-bundle B` | `pmt task -f F N set-bundle B` |
+| `pmt modify -f F pipeline OPERATION ...` | `pmt pipeline -f F OPERATION ...` |
+| `pmt modify -f F generic OPERATION ...` | `pmt generic -f F OPERATION ...` |
+
+`-f`/`--file` and `--dry-run` are options of `task`, `pipeline` and `generic`, so they precede
+the task name and the operation. Operation names (`add`, `rename`, ...) are reserved and cannot
+be used as task names. `migrate` and `format` are the same in both versions.
+
 ## Development environment management
 
 * Create a virtual environment: `make venv/create`

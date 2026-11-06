@@ -455,13 +455,21 @@ For example:
 - A bug fix that does not introduce changes to the original behavior and command line interface:
   `++patch`, otherwise `++minor`
 
-### Steps
+### Release process
+
+1. Determine what has changed since last release and update the VERSION file.
+2. Send a PR to update the version and changelog.
+3. Once merged, create the GitHub release as `v{version}` (e.g. `v0.1.0`).
+4. Merging the PR will trigger a Konflux on-push pipeline, which will
+   auto-release the version if VERSION file is changed in the main.
+
+### Publish the GitHub release
 
 Follow these steps to make and publish a release. Here, version `0.4.2` is used as an example.
 
 - Synchronize with `main` branch
 - Checkout to a release branch `release-0.4.2`
-- Update version in `src/pipeline_migration/__init__.py`
+- Update the root `VERSION` file
 - Commit the change with title `Release 0.4.2` and open a pull request.
 - Review and merge the pull request
 - Go to https://github.com/konflux-ci/pipeline-migration-tool/releases/new
@@ -486,7 +494,9 @@ Post-release steps:
 
 ### Run script alternatively
 
-Executes commands in the following order to help making a release:
+The helper updates `VERSION`, opens the version-bump pull request, and publishes the GitHub release.
+It does not trigger or wait for a Konflux release. Run the following commands in order, completing
+the container image release after the pull request is merged:
 
 ```bash
 ./hack/make-release.sh make_release_for_review version issue-key

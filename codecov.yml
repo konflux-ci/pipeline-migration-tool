@@ -2,6 +2,9 @@
 codecov:
   require_ci_to_pass: true
 
+ignore:
+  - "hack/integration-test/**" # integration test scripts
+
 coverage:
   status:
     project:
@@ -11,8 +14,8 @@ coverage:
         informational: true
     patch:
       default:
-        target: 80%
-        informational: true
+        target: 85%
+        informational: false
 
 flags:
   unit-tests:

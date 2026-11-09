@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: get-build-params
+spec:
+  params:
+    - name: SOURCE_ARTIFACT
+      type: string
+      description: >-
+        The Trusted Artifact URI pointing to the artifact with the application source code.
+  results:
+    - name: annotations
+      type: array
+      description: ANNOTATIONS array for buildah
+    - name: labels
+      type: array
+      description: LABELS array for buildah
+  steps:
+    - name: use-trusted-artifact
+      image: quay.io/konflux-ci/build-trusted-artifacts:latest@sha256:d572a66b49f041fc9fa7334bdc78ce8d416ad4b438a5b0105aa9187698faf814
+      args:
+        - use
+        - $(params.SOURCE_ARTIFACT)=/tekton/home/source
+    - name: set-results
+      image: registry.access.redhat.com/ubi9/python-312-minimal:9.8@sha256:a3a5cfe0c6738de28a6fa8f8cb61c16491605dd6786905c8984b79385c353783
+      env:
+        - name: ANNOTATIONS_RESULT
+          value: $(results.annotations.path)
+        - name: LABELS_RESULT
+          value: $(results.labels.path)
+      workingDir: /tekton/home/source
+      script: |
+        #!/bin/sh
+        set -eu
+
+        package_version=$(cat VERSION)
+        version_major=${package_version%%.*}
+
+        printf '["org.opencontainers.image.version=%s"]' "$package_version" > "$ANNOTATIONS_RESULT"
+        printf '[
+          "org.opencontainers.image.version=%s",
+          "version=%s",
+          "version.major=%s"
+        ]' "$package_version" "$package_version" "$version_major" > "$LABELS_RESULT"

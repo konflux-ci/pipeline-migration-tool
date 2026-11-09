@@ -33,6 +33,16 @@ spec:
     value: Dockerfile
   - name: path-context
     value: .
+  - name: hermetic
+    value: "true"
+  - name: prefetch-input
+    value: >-
+      [{"type":"pip","requirements_files":["requirements.txt","requirements-test.txt"],
+      "requirements_build_files":["requirements-build.txt"]}]
+  - name: build-source-image
+    value: "true"
+  - name: target-stage
+    value: runtime
   pipelineSpec:
     description: |
       This pipeline is ideal for building multi-arch container images from a Containerfile while maintaining trust after pipeline customization.
@@ -187,6 +197,12 @@ spec:
       workspaces:
       - name: basic-auth
         workspace: git-auth
+    - name: get-build-params
+      taskRef:
+        name: get-build-params
+      params:
+      - name: SOURCE_ARTIFACT
+        value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
     - name: prefetch-dependencies
       params:
       - name: input
@@ -236,6 +252,12 @@ spec:
         value: $(params.image-expires-after)
       - name: COMMIT_SHA
         value: $(tasks.clone-repository.results.commit)
+      - name: ANNOTATIONS
+        value:
+        - $(tasks.get-build-params.results.annotations[*])
+      - name: LABELS
+        value:
+        - $(tasks.get-build-params.results.labels[*])
       - name: BUILD_ARGS
         value:
         - $(params.build-args[*])

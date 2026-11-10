@@ -455,38 +455,42 @@ For example:
 - A bug fix that does not introduce changes to the original behavior and command line interface:
   `++patch`, otherwise `++minor`
 
-### Steps
+### Release process
 
-Follow these steps to make and publish a release. Here, version `0.4.2` is used as an example.
+Follow these steps to release the container image and publish the GitHub release so MintMaker
+can pick it up. Version `0.4.2` is used as an example.
 
-- Synchronize with `main` branch
-- Checkout to a release branch `release-0.4.2`
-- Update version in `src/pipeline_migration/__init__.py`
-- Commit the change with title `Release 0.4.2` and open a pull request.
-- Review and merge the pull request
-- Go to https://github.com/konflux-ci/pipeline-migration-tool/releases/new
-- Create a new tag `v0.4.2`
-- Ensure the target is `main` branch
-- Click button `Generate release notes` and refine the release notes if necessary
-- Check `Set as the latest release`
-- Click button `Publish release`
-
-Done 🎉
+1. Determine what has changed since the last release and choose the next version.
+2. Synchronize with the `main` branch and check out a release branch, such as `release-0.4.2`.
+3. Update the root `VERSION` file, commit the change with the title `Release 0.4.2`, and open
+   a pull request.
+4. Review and merge the pull request. Merging triggers a Konflux on-push pipeline, which
+   automatically releases the version when the `VERSION` file changes on `main`. This creates
+   an image in the [quay.io repository](https://quay.io/repository/konflux-ci/pipeline-migration-tool-runner?tab=tags).
+5. Wait until the image for the new version is present in the Quay repository linked above
+   before publishing the GitHub release.
+6. Go to the
+   [new GitHub release page](https://github.com/konflux-ci/pipeline-migration-tool/releases/new).
+7. Create a tag in the form `v{version}`, such as `v0.4.2`, and ensure the target is `main`.
+8. Click `Generate release notes` and refine the release notes if necessary.
+9. Check `Set as the latest release` and click `Publish release`.
 
 Then, Renovate will send an update pull request to [konflux-ci/mintmaker-renovate-image]
 automatically in order to upgrade pipeline-migration-tool to the new version.
 
 Post-release steps:
 
-- It is highly recommend to link the Renovate update pull request to the release story.
-- If there is no release story for the new release, it can be optionally linked to the major feature
+- Linking the Renovate update pull request to the release story is highly recommended.
+- If there is no release story for the new release, optionally link it to the major feature
   or bugfix JIRA issue.
 - Open a pull request to MintMaker [Renovate configuration] when necessary
-  to use new command line interface.
+  to use the new command line interface.
 
 ### Run script alternatively
 
-Executes commands in the following order to help making a release:
+The helper updates `VERSION`, opens the version-bump pull request, and publishes the GitHub release.
+It does not trigger or wait for a Konflux release. Run the following commands in order, completing
+the container image release after the pull request is merged:
 
 ```bash
 ./hack/make-release.sh make_release_for_review version issue-key

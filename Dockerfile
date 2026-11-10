@@ -26,6 +26,7 @@ LABEL com.redhat.component="pipeline-migration-tool"
 
 COPY --from=base /venv /venv
 USER 0
+COPY LICENSE /licenses/
 RUN ln -s /venv/bin/pipeline-migration-tool /usr/local/bin/pipeline-migration-tool
 
 USER 1001

@@ -34,11 +34,9 @@ spec:
         set -eu
 
         package_version=$(cat VERSION)
-        version_major=${package_version%%.*}
 
         printf '["org.opencontainers.image.version=%s"]' "$package_version" > "$ANNOTATIONS_RESULT"
         printf '[
           "org.opencontainers.image.version=%s",
-          "version=%s",
-          "version.major=%s"
-        ]' "$package_version" "$package_version" "$version_major" > "$LABELS_RESULT"
+          "version=%s"
+        ]' "$package_version" "$package_version" > "$LABELS_RESULT"

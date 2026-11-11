@@ -20,6 +20,11 @@
 
   "packageRules": [
     {
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["python"],
+      "enabled": false
+    },
+    {
       "matchDatasources": ["pypi"],
       "groupName": "Python package updates",
       "schedule": [

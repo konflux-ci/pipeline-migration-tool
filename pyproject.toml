@@ -52,7 +52,7 @@ pipeline-migration-tool = "pipeline_migration.cli:entry_point"
 pmt = "pipeline_migration.cli:entry_point"
 
 [tool.setuptools.dynamic]
-version = {attr = "pipeline_migration.__version__"}
+version = {file = "VERSION"}
 
 [tool.pytest.ini_options]
 addopts = [

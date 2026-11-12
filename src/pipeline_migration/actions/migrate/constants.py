@@ -65,10 +65,26 @@ MIGRATION_IMAGE_TAG_REGEX: Final = re.compile(
 
 MIGRATION_IMAGE_TAG_LIKE_PATTERN: Final = r"migration-%.%-%-%"
 
-# Match pipeline-migration-tool CLI.
+# Match pipeline-migration-tool CLI commands modifying pipelines with minimal diffs, i.e. through
+# the yamleditor module instead of regenerating the whole document (e.g. by "yq -i").
 # Line continuation is matched by [\s\\]+
 # Command name can be either pipeline-migration-tool or pmt.
+# API v1 matches only "modify". API v2 matches "task", "pipeline" or "generic", optionally
+# preceded by environment variable assignments, e.g. PMT_API_VERSION=2 pmt task ...
 REGEX_PMT_MODIFY_USAGE = re.compile(
-    r"^\s*(pipeline-migration-tool|pmt)[\s\\]+modify\s",
+    r"^\s*(?:"
+    r"(?:pipeline-migration-tool|pmt)[\s\\]+modify"
+    r"|(?:\w+=\S*\s+)*(?:pipeline-migration-tool|pmt)[\s\\]+(?:task|pipeline|generic)"
+    r")\s",
+    re.MULTILINE,
+)
+
+# Match the API version a migration script declares, e.g. at the top of the script:
+#   export PMT_API_VERSION=2
+# or as a prefix of a pmt command:
+#   PMT_API_VERSION=2 pmt task ...
+# The value must be a literal number, optionally quoted.
+REGEX_PMT_API_VERSION = re.compile(
+    r"^\s*(?:export\s+|env\s+)?(?:\w+=\S*\s+)*PMT_API_VERSION=[\"']?(\d+)[\"']?(?=[\s;]|$)",
     re.MULTILINE,
 )

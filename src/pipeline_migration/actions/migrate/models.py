@@ -1,7 +1,11 @@
 from functools import cached_property
 from dataclasses import dataclass, field
 
-from pipeline_migration.actions.migrate.constants import REGEX_PMT_MODIFY_USAGE
+from pipeline_migration.actions.migrate.constants import (
+    REGEX_PMT_API_VERSION,
+    REGEX_PMT_MODIFY_USAGE,
+)
+from pipeline_migration.api_version import MIGRATION_API_VERSION, ApiVersion
 
 
 @dataclass
@@ -15,8 +19,27 @@ class TaskBundleMigration:
 
     @cached_property
     def is_pmt_modify_used(self) -> bool:
-        """Check whether the migration script uses the pmt modify command."""
+        """Check whether the migration script uses pmt commands modifying pipelines."""
         return REGEX_PMT_MODIFY_USAGE.search(self.migration_script) is not None
+
+    @cached_property
+    def declared_api_version(self) -> int | None:
+        """API version the script sets via PMT_API_VERSION, or None if it sets none.
+
+        Found by static analysis. Scripts are expected to declare the version once, at the top.
+        """
+        match = REGEX_PMT_API_VERSION.search(self.migration_script)
+        return int(match.group(1)) if match else None
+
+    @property
+    def api_version_description(self) -> str:
+        """Describe the API version the script runs with, for logging."""
+        version = self.declared_api_version
+        if version is None:
+            return f"{MIGRATION_API_VERSION}, default"
+        if version not in {v.value for v in ApiVersion}:
+            return f"{version}, unsupported"
+        return str(version)
 
 
 @dataclass

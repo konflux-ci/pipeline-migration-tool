@@ -1444,6 +1444,57 @@ def test_detect_pmt_modify_use(script, expected):
 
 
 @pytest.mark.parametrize(
+    "script,expected",
+    [
+        pytest.param('pmt modify -f "$1" task clone add-param p v', True, id="v1-modify"),
+        pytest.param('pmt task -f "$1" clone add-param p v', True, id="v2-task"),
+        pytest.param('pmt pipeline -f "$1" remove-param p', True, id="v2-pipeline"),
+        pytest.param("pipeline-migration-tool generic remove '[\"a\"]'", True, id="v2-generic"),
+        pytest.param('  pmt \\\n  task -f "$1" clone remove-param p', True, id="continuation"),
+        pytest.param(
+            'PMT_API_VERSION=2 pmt task -f "$1" clone remove-param p', True, id="env-prefix"
+        ),
+        pytest.param('yq -i ".spec.tasks += []" "$1"', False, id="yq-only"),
+        pytest.param('echo "pmt task is used"', False, id="not-a-command"),
+        pytest.param('pmt add-task "$BUNDLE" "$1"', False, id="v1-add-task"),
+        pytest.param('FOO=bar pmt modify -f "$1" task clone remove-param p', False, id="v1-env"),
+        pytest.param('pmt task -f "$1" add "$BUNDLE"', True, id="v2-task-add"),
+        pytest.param('pmt format -f "$1"', False, id="format"),
+    ],
+)
+def test_detect_pmt_commands_of_all_api_versions(script, expected):
+    migration = TaskBundleMigration(task_bundle="bundle", migration_script=f"#!/bin/bash\n{script}")
+    assert migration.is_pmt_modify_used is expected
+
+
+@pytest.mark.parametrize(
+    "script,declared,description",
+    [
+        pytest.param('pmt modify -f "$1" task clone add-param p v', None, "1, default", id="none"),
+        pytest.param("export PMT_API_VERSION=2\npmt task -f x c rename d", 2, "2", id="export"),
+        pytest.param("export PMT_API_VERSION=1", 1, "1", id="export-v1"),
+        pytest.param('export PMT_API_VERSION="2"', 2, "2", id="double-quoted"),
+        pytest.param("export PMT_API_VERSION='2'", 2, "2", id="single-quoted"),
+        pytest.param("  export PMT_API_VERSION=2  # use v2", 2, "2", id="indent-and-comment"),
+        pytest.param("export PMT_API_VERSION=2; pmt task", 2, "2", id="semicolon"),
+        pytest.param("PMT_API_VERSION=2", 2, "2", id="plain-assignment"),
+        pytest.param('PMT_API_VERSION=2 pmt task -f "$1" c rename d', 2, "2", id="cmd-prefix"),
+        pytest.param("FOO=bar PMT_API_VERSION=2 pmt task", 2, "2", id="after-other-var"),
+        pytest.param("env PMT_API_VERSION=2 pmt task", 2, "2", id="env-cmd"),
+        pytest.param("export PMT_API_VERSION=3", 3, "3, unsupported", id="unsupported"),
+        pytest.param("# export PMT_API_VERSION=2", None, "1, default", id="commented-out"),
+        pytest.param('export PMT_API_VERSION="$V"', None, "1, default", id="not-a-literal"),
+        pytest.param("export PMT_API_VERSION=2.0", None, "1, default", id="not-an-integer"),
+        pytest.param("export MY_PMT_API_VERSION=2", None, "1, default", id="other-variable"),
+    ],
+)
+def test_detect_declared_api_version(script, declared, description):
+    migration = TaskBundleMigration(task_bundle="bundle", migration_script=f"#!/bin/bash\n{script}")
+    assert migration.declared_api_version == declared
+    assert migration.api_version_description == description
+
+
+@pytest.mark.parametrize(
     "pattern,path,expected",
     [
         pytest.param("quay.io/org/**", "quay.io/org/img", True, id="doublestar-end-one-segment"),

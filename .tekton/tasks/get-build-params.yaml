@@ -22,7 +22,7 @@ spec:
         - use
         - $(params.SOURCE_ARTIFACT)=/tekton/home/source
     - name: set-results
-      image: registry.access.redhat.com/ubi9/python-312-minimal:9.9-1793849672@sha256:8763032e21745e808102758c6ccf89b23cbe8ca44f39fc9311ee8304026eb311
+      image: registry.access.redhat.com/ubi9/python-312-minimal:9.9-1794502907@sha256:612eb994cd4255fbafd0de6967efba8d72b62c812058e68e28974458529d0523
       env:
         - name: ANNOTATIONS_RESULT
           value: $(results.annotations.path)

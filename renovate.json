@@ -37,6 +37,13 @@
       "schedule": [
         "* 0-3 1 * *"
       ]
+    },
+    {
+      "matchFileNames": [".tekton/tasks/get-build-params.yaml"],
+      "groupName": "Tekton task image updates",
+      "schedule": [
+        "* 0-3 1 * *"
+      ]
     }
   ]
 }

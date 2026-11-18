@@ -1,5 +1,5 @@
-from pathlib import Path
+from importlib.metadata import version
 
-_version_file = Path(__file__).resolve().parents[2] / "VERSION"
-
-__version__ = _version_file.read_text(encoding="utf-8").strip()
+# The version is defined in the VERSION file at the repository root and baked into the
+# package metadata by setuptools at build time (see [tool.setuptools.dynamic] in pyproject.toml).
+__version__ = version("pipeline-migration-tool")

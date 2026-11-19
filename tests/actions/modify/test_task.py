@@ -1,11 +1,14 @@
 import pytest
 from textwrap import dedent
+from typing import Final
+import logging
 
 from pipeline_migration.actions.modify.task import (
     ModTaskAddParamOperation,
     ModTaskRemoveParamOperation,
     ModTaskMatrixAddParamOperation,
     ModTaskMatrixRemoveParamOperation,
+    ModTaskRemoveMatrixOperation,
     ModTaskRenameOperation,
     ModTaskSetBundleOperation,
     TaskNotFoundError,
@@ -1727,6 +1730,190 @@ class TestModTaskMatrixRemoveParamOperation:
             """)
 
         assert read_file_content(pipeline_run_matrix_include_only_yaml_file) == expected
+
+
+class TestModTaskRemoveMatrixOperation:
+    """Test cases for ModTaskRemoveMatrixOperation class."""
+
+    PIPELINE_WITHOUT_MATRIX: Final = dedent("""\
+        apiVersion: tekton.dev/v1
+        kind: Pipeline
+        metadata:
+          name: test-pipeline
+        spec:
+          {section}:
+            - name: clone
+              taskRef:
+                name: git-clone
+            - name: test-task
+              taskRef:
+                name: test-runner
+        """)
+
+    PIPELINE_RUN_WITHOUT_MATRIX: Final = dedent("""\
+        apiVersion: tekton.dev/v1
+        kind: PipelineRun
+        metadata:
+          name: test-pipeline-run
+        spec:
+          pipelineSpec:
+            {section}:
+              - name: clone
+                taskRef:
+                  name: git-clone
+              - name: test-task
+                taskRef:
+                  name: test-runner
+        """)
+
+    @pytest.mark.parametrize(
+        "yaml_file_fixture,handler,expected",
+        [
+            pytest.param(
+                "pipeline_matrix_yaml_file",
+                "handle_pipeline_file",
+                PIPELINE_WITHOUT_MATRIX.format(section="tasks"),
+                id="pipeline-tasks",
+            ),
+            pytest.param(
+                "pipeline_matrix_finally_yaml_file",
+                "handle_pipeline_file",
+                PIPELINE_WITHOUT_MATRIX.format(section="finally"),
+                id="pipeline-finally",
+            ),
+            pytest.param(
+                "pipeline_run_matrix_yaml_file",
+                "handle_pipeline_run_file",
+                PIPELINE_RUN_WITHOUT_MATRIX.format(section="tasks"),
+                id="pipeline-run-tasks",
+            ),
+            pytest.param(
+                "pipeline_run_matrix_finally_yaml_file",
+                "handle_pipeline_run_file",
+                PIPELINE_RUN_WITHOUT_MATRIX.format(section="finally"),
+                id="pipeline-run-finally",
+            ),
+            pytest.param(
+                "pipeline_run_matrix_include_only_yaml_file",
+                "handle_pipeline_run_file",
+                PIPELINE_RUN_WITHOUT_MATRIX.format(section="tasks"),
+                id="pipeline-run-matrix-include-only",
+            ),
+        ],
+    )
+    def test_remove_matrix(self, yaml_file_fixture, handler, expected, request):
+        """The whole matrix is removed regardless of its content, kind and section"""
+        yaml_file = request.getfixturevalue(yaml_file_fixture)
+        op = ModTaskRemoveMatrixOperation("clone")
+
+        getattr(op, handler)(yaml_file, load_yaml(yaml_file), YAMLStyle.detect(yaml_file))
+
+        assert read_file_content(yaml_file) == expected
+
+    def test_matrix_is_first_key_of_task(self, create_yaml_file):
+        """The sequence item indicator moves to the next key when the matrix starts the task
+
+        Keys sorted alphabetically put the matrix before the name, e.g. in pipelines generated
+        by yq or kubectl.
+        """
+        yaml_file = create_yaml_file(dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+              - name: init
+                taskRef:
+                  name: init
+              - matrix:
+                  params:
+                  - name: PLATFORM
+                    value:
+                    - $(params.build-platforms)
+                name: build-images
+                params:
+                - name: IMAGE
+                  value: $(params.output-image)
+                runAfter:
+                - init
+                taskRef:
+                  name: buildah-remote
+              - name: build-image-index
+                runAfter:
+                - build-images
+            """))
+        op = ModTaskRemoveMatrixOperation("build-images")
+
+        op.handle_pipeline_file(yaml_file, load_yaml(yaml_file), YAMLStyle.detect(yaml_file))
+
+        assert read_file_content(yaml_file) == dedent("""\
+            apiVersion: tekton.dev/v1
+            kind: Pipeline
+            metadata:
+              name: test-pipeline
+            spec:
+              tasks:
+              - name: init
+                taskRef:
+                  name: init
+              - name: build-images
+                params:
+                - name: IMAGE
+                  value: $(params.output-image)
+                runAfter:
+                - init
+                taskRef:
+                  name: buildah-remote
+              - name: build-image-index
+                runAfter:
+                - build-images
+            """)
+
+    def test_no_change_when_task_has_no_matrix(self, pipeline_matrix_yaml_file, caplog):
+        """Removing a matrix from a task without one is a no-op"""
+        origin_content = read_file_content(pipeline_matrix_yaml_file)
+        op = ModTaskRemoveMatrixOperation("test-task")
+        loaded_doc = load_yaml(pipeline_matrix_yaml_file)
+        style = YAMLStyle.detect(pipeline_matrix_yaml_file)
+
+        with caplog.at_level(logging.INFO):
+            result = op._do_action(
+                loaded_doc["spec"]["tasks"], ["spec", "tasks"], pipeline_matrix_yaml_file, style
+            )
+
+        assert result is False
+        assert read_file_content(pipeline_matrix_yaml_file) == origin_content
+        assert "task 'test-task'" in caplog.text
+        assert "matrix does not exist, nothing to remove" in caplog.text
+
+    def test_task_not_found(self, pipeline_matrix_yaml_file):
+        """Behavior when specified task doesn't exist."""
+        origin_content = read_file_content(pipeline_matrix_yaml_file)
+        op = ModTaskRemoveMatrixOperation("nonexistent-task")
+        loaded_doc = load_yaml(pipeline_matrix_yaml_file)
+        style = YAMLStyle.detect(pipeline_matrix_yaml_file)
+
+        with pytest.raises(TaskNotFoundError):
+            op._do_action(
+                loaded_doc["spec"]["tasks"], ["spec", "tasks"], pipeline_matrix_yaml_file, style
+            )
+
+        assert read_file_content(pipeline_matrix_yaml_file) == origin_content
+
+    def test_warn_when_task_not_found_in_file(self, pipeline_matrix_yaml_file, caplog):
+        """A missing task is reported, not raised, when handling the whole file"""
+        origin_content = read_file_content(pipeline_matrix_yaml_file)
+        op = ModTaskRemoveMatrixOperation("nonexistent-task")
+
+        op.handle_pipeline_file(
+            pipeline_matrix_yaml_file,
+            load_yaml(pipeline_matrix_yaml_file),
+            YAMLStyle.detect(pipeline_matrix_yaml_file),
+        )
+
+        assert read_file_content(pipeline_matrix_yaml_file) == origin_content
+        assert "task 'nonexistent-task' does not exist" in caplog.text
 
 
 @pytest.fixture

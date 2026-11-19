@@ -8,15 +8,21 @@ from ruamel.yaml.comments import CommentedSeq, CommentedMap
 
 from pipeline_migration.yamleditor import EditYAMLEntry, YAMLPath
 from pipeline_migration.utils import YAMLStyle, create_yaml_obj, load_yaml
-from pipeline_migration.actions.modify.common import run_modify
+from pipeline_migration.api_version import ApiVersion
+from pipeline_migration.actions.modify.common import (
+    add_target_arguments,
+    render_description,
+    run_modify,
+)
 from pipeline_migration.actions.modify.common import get_nested
 
 logger = logging.getLogger("modify.generic")
 
 
-SUBCMD_DESCRIPTION: Final = """\
+# Description shared by all API versions, see render_description()
+SUBCMD_DESCRIPTION_TEMPLATE: Final = """\
 
-Subcommanad "generic" requires path within the YAML doc in "yq" path function style,
+Subcommand "generic" requires path within the YAML doc in "yq" path function style,
 where an operation should be executed.
 
 YAML path is list of indexes in YAML format.
@@ -32,22 +38,22 @@ The following are several examples with a raw yaml modification:
 * Modify an yaml item within relative .tekton/ directory.
 
     cd /path/to/repo
-    pmt modify generic insert '["path", "to", "yaml", "item"]' '{"new": "item"}'
+    {{pmt}} insert '["path", "to", "yaml", "item"]' '{"new": "item"}'
 
 * Modify an yaml item in multiple pipelines in several repositories:
 
-    pmt modify \\
-        -f /path/to/repo1/.tekton/pr.yaml -f /path/to/repo2/.tekton/push.yaml \\
-        generic replace \\
-        '["path", "to", "yaml", "item", 3]' '{"replaced": "new"}'
+    {{pmt -f /path/to/repo1/.tekton/pr.yaml -f /path/to/repo2/.tekton/push.yaml}} \\
+        replace '["path", "to", "yaml", "item", 3]' '{"replaced": "new"}'
 
 * Remove a task using yq's `path` function:
 
-   pmt modify \\
-        -f .tekton/pr.yaml \\
-        generic remove \\
+    {{pmt -f .tekton/pr.yaml}} remove \\
         "$(yq '.spec.pipelineSpec.tasks[] | select(.name == "prefetch-dependencies") | \\
             path' .tekton/pr.yaml)"
+
+* Show the changes without modifying the files:
+
+    {{pmt --dry-run}} remove '["metadata", "labels"]'
 
 WARNING: generic subcommand should be used as the last resort subcommand, it doesn't do any
 semantic validation for Konflux tasks.
@@ -129,19 +135,37 @@ def yaml_value_type(param: str) -> Any:
         return yaml_value
 
 
+GENERIC_HELP: Final = (
+    "Generic modification of YAML file (specific resource subcommands should be preferred)"
+)
+
+
 def register_cli(subparser) -> None:
-    """Register the 'generic' subcommand and its sub-actions on the CLI parser."""
+    """Register the 'generic' subcommand (API v1, under 'modify') on the CLI parser."""
     mod_generic_parser = subparser.add_parser(
         "generic",
-        help=(
-            "Generic modification of YAML file (specific resource subcommands should "
-            "be preferred)"
-        ),
-        description=SUBCMD_DESCRIPTION,
+        help=GENERIC_HELP,
+        description=render_description(SUBCMD_DESCRIPTION_TEMPLATE, "generic", ApiVersion.V1),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    register_operations(mod_generic_parser)
 
-    subparser_mod = mod_generic_parser.add_subparsers(
+
+def register_cli_v2(subparser) -> None:
+    """Register the top-level 'generic' subcommand (API v2) on the CLI parser."""
+    generic_parser = subparser.add_parser(
+        "generic",
+        help=GENERIC_HELP,
+        description=render_description(SUBCMD_DESCRIPTION_TEMPLATE, "generic", ApiVersion.V2),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_target_arguments(generic_parser, "-f", "--file", metavar="FILE")
+    register_operations(generic_parser)
+
+
+def register_operations(resource_parser: argparse.ArgumentParser) -> None:
+    """Register the generic operations, shared by all API versions."""
+    subparser_mod = resource_parser.add_subparsers(
         title="subcommands to generic modifications", required=True
     )
 

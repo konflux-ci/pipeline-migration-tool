@@ -113,14 +113,45 @@ def task_param(value: str) -> tuple[str, str]:
     return parts[0], parts[1]
 
 
+ADD_TASK_HELP: Final = "Add a task to build pipelines using a bundle reference."
+ADD_TO_FINALLY_HELP: Final = "Add the task to the 'finally' section instead of the 'tasks' section."
+
+
 def register_cli(subparser) -> None:
-    """Register the add-task subcommand and its arguments."""
+    """Register the add-task subcommand (API v1) and its arguments."""
     add_task_parser = subparser.add_parser(
         "add-task",
-        help="Add a task to build pipelines using a bundle reference.",
+        help=ADD_TASK_HELP,
         description=SUBCMD_DESCRIPTION,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    add_task_arguments(add_task_parser)
+    add_task_parser.add_argument(
+        "file_or_dir",
+        nargs="*",
+        help="Specify locations from where finding out pipelines to add task. "
+        "A pipeline can be included in a PipelineRun or a single Pipeline definition. "
+        "%(prog)s searches pipelines from given locations by rules, if files are specified, "
+        "search just pipelines from them. If directories are specified, search YAML files from the "
+        "first level of each one. If neither is specified, the location defaults to ./.tekton/ "
+        "directory.",
+    )
+    add_task_parser.add_argument(
+        "-f",
+        "--add-to-finally",
+        action="store_true",
+        dest="add_to_finally",
+        help=ADD_TO_FINALLY_HELP,
+    )
+    add_task_parser.set_defaults(action=action)
+
+
+def add_task_arguments(add_task_parser: argparse.ArgumentParser) -> None:
+    """Add the arguments describing the added task, shared by all API versions.
+
+    Pipeline file locations and the add-to-finally option are spelled differently in each API
+    version, so they are added by the callers.
+    """
     add_task_parser.add_argument(
         "bundle_ref",
         type=get_task_bundle_reference,
@@ -131,16 +162,6 @@ def register_cli(subparser) -> None:
         "(e.g., 'quay.io/.../task-check' becomes 'task-check'). "
         "If the name ends in '-oci-ta', the suffix is removed. "
         "To specify a pipeline task name explicitly, use option --pipeline-task-name.",
-    )
-    add_task_parser.add_argument(
-        "file_or_dir",
-        nargs="*",
-        help="Specify locations from where finding out pipelines to add task. "
-        "A pipeline can be included in a PipelineRun or a single Pipeline definition. "
-        "%(prog)s searches pipelines from given locations by rules, if files are specified, "
-        "search just pipelines from them. If directories are specified, search YAML files from the "
-        "first level of each one. If neither is specified, the location defaults to ./.tekton/ "
-        "directory.",
     )
     add_task_parser.add_argument(
         "-n",
@@ -185,14 +206,6 @@ def register_cli(subparser) -> None:
         action="store_true",
         help="Add the modified files to git index.",
     )
-    add_task_parser.add_argument(
-        "-f",
-        "--add-to-finally",
-        action="store_true",
-        dest="add_to_finally",
-        help="Add the task to the 'finally' section instead of the 'tasks' section.",
-    )
-    add_task_parser.set_defaults(action=action)
 
 
 class AddTaskOperation(PipelineFileOperation):
@@ -409,8 +422,8 @@ def get_actual_task_name(bundle_ref: Container) -> str:
     raise RuntimeError(msg)
 
 
-def action(args) -> None:
-    """Execute the add-task command with the parsed CLI arguments."""
+def build_operation(args, git_add: bool) -> AddTaskOperation:
+    """Create the operation adding the task described by the parsed CLI arguments."""
     bundle_ref: str = args.bundle_ref
 
     container = Container(bundle_ref)
@@ -444,17 +457,23 @@ def action(args) -> None:
             }
         ]
 
+    return AddTaskOperation(
+        task_config,
+        pipeline_task_name,
+        actual_task_name,
+        git_add=git_add,
+        add_to_finally=args.add_to_finally,
+    )
+
+
+def action(args) -> None:
+    """Execute the add-task command (API v1) with the parsed CLI arguments."""
+    op = build_operation(args, git_add=args.git_add)
+
     search_places = [path for path in args.file_or_dir if path]
     relative_tekton_dir = Path("./.tekton")
     if not search_places and relative_tekton_dir.exists():
         search_places = [str(relative_tekton_dir.absolute())]
 
-    op = AddTaskOperation(
-        task_config,
-        pipeline_task_name,
-        actual_task_name,
-        git_add=args.git_add,
-        add_to_finally=args.add_to_finally,
-    )
     for file_path in iterate_files_or_dirs(search_places):
         op.handle(str(file_path))

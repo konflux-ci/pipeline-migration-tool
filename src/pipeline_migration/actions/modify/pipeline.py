@@ -11,29 +11,37 @@ from pipeline_migration.yamleditor import EditYAMLEntry
 from pipeline_migration.types import FilePath
 from pipeline_migration.utils import YAMLStyle, load_yaml
 from pipeline_migration.pipeline import PipelineFileOperation
-from pipeline_migration.actions.modify.common import ParamType, get_nested, run_modify
+from pipeline_migration.actions.modify.common import (
+    ParamType,
+    add_target_arguments,
+    get_nested,
+    render_description,
+    run_modify,
+)
+from pipeline_migration.api_version import ApiVersion
 
 logger = logging.getLogger("modify.pipeline")
 
 
-SUBCMD_DESCRIPTION: Final = """\
+# Description shared by all API versions, see render_description()
+SUBCMD_DESCRIPTION_TEMPLATE: Final = """\
 The following are several examples for modifying pipeline parameters and results:
 
 * Add a pipeline parameter:
 
-    pmt modify pipeline add-param --default "" --description "Git repository URL" git-url
+    {{pmt}} add-param --default "" --description "Git repository URL" git-url
 
 * Add an array parameter with default values:
 
-    pmt modify pipeline add-param --type array --default '["val1","val2"]' my-param
+    {{pmt}} add-param --type array --default '["val1","val2"]' my-param
 
 * Add a parameter with an empty array default:
 
-    pmt modify pipeline add-param --type array --default "" my-param
+    {{pmt}} add-param --type array --default "" my-param
 
 * Add a parameter with a multiline description:
 
-    pmt modify pipeline add-param --default "" \\
+    {{pmt}} add-param --default "" \\
         --description $'First line\\nSecond line' my-param
 
   Or using a variable:
@@ -43,31 +51,35 @@ The following are several examples for modifying pipeline parameters and results
     that spans multiple lines.
     EOF
     )
-    pmt modify pipeline add-param --default "" --description "$description" my-param
+    {{pmt}} add-param --default "" --description "$description" my-param
 
 * Remove a pipeline parameter:
 
-    pmt modify pipeline remove-param git-url
+    {{pmt}} remove-param git-url
 
 * Add a pipeline result:
 
-    pmt modify pipeline add-result \\
+    {{pmt}} add-result \\
         --description "Image digest" \\
         'IMAGE_DIGEST=$(tasks.build.results.IMAGE_DIGEST)'
 
 * Add an array result (value is a JSON array):
 
-    pmt modify pipeline add-result --type array \\
+    {{pmt}} add-result --type array \\
         'IMAGES=["$(tasks.foo.results.bar)","$(tasks.spam.results.egg)"]'
 
 * Add an object result (value is a JSON object):
 
-    pmt modify pipeline add-result --type object \\
+    {{pmt}} add-result --type object \\
         'BUILD_OUTPUT={"image_url":"$(tasks.build.results.IMAGE_URL)"}'
 
 * Remove a pipeline result:
 
-    pmt modify pipeline remove-result IMAGE_DIGEST
+    {{pmt}} remove-result IMAGE_DIGEST
+
+* Show the changes without modifying the files:
+
+    {{pmt --dry-run}} remove-param git-url
 
 * Supported pipeline modifications:
    - add-param: adds a new parameter to the pipeline
@@ -362,16 +374,35 @@ class PipelineRemoveResultOperation(PipelineBase):
         )
 
 
+PIPELINE_HELP: Final = "Update pipeline-level parameters and results"
+
+
 def register_cli(subparser) -> None:
-    """Register the 'pipeline' subcommand and its sub-actions on the CLI parser."""
+    """Register the 'pipeline' subcommand (API v1, under 'modify') on the CLI parser."""
     mod_pipeline_parser = subparser.add_parser(
         "pipeline",
-        help="Update pipeline-level parameters and results",
-        description=SUBCMD_DESCRIPTION,
+        help=PIPELINE_HELP,
+        description=render_description(SUBCMD_DESCRIPTION_TEMPLATE, "pipeline", ApiVersion.V1),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    register_operations(mod_pipeline_parser)
 
-    subparser_mod = mod_pipeline_parser.add_subparsers(
+
+def register_cli_v2(subparser) -> None:
+    """Register the top-level 'pipeline' subcommand (API v2) on the CLI parser."""
+    pipeline_parser = subparser.add_parser(
+        "pipeline",
+        help=PIPELINE_HELP,
+        description=render_description(SUBCMD_DESCRIPTION_TEMPLATE, "pipeline", ApiVersion.V2),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    add_target_arguments(pipeline_parser, "-f", "--file", metavar="FILE")
+    register_operations(pipeline_parser)
+
+
+def register_operations(resource_parser: argparse.ArgumentParser) -> None:
+    """Register the pipeline operations, shared by all API versions."""
+    subparser_mod = resource_parser.add_subparsers(
         title="subcommands to modify pipeline", required=True
     )
 
